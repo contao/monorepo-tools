@@ -1,0 +1,31 @@
+{
+    "name": "contao/monorepo",
+    "type": "library",
+    "description": "Contao mono repo helper",
+    "license": "LGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Martin Auswöger",
+            "homepage": "https://au.si/"
+        }
+    ],
+    "require": {
+        "php": "^7.1",
+        "symfony/console": "^4.1"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.12",
+        "php-coveralls/php-coveralls": "^2.1",
+        "phpunit/phpunit": "^5.7.26"
+    },
+    "autoload": {
+        "psr-4": {
+            "Contao\\Monorepo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Contao\\Monorepo\\Tests\\": "tests/"
+        }
+    }
+}
