@@ -11,75 +11,117 @@
 namespace Contao\Monorepo;
 
 use Contao\Monorepo\Git\Commit;
+use Contao\Monorepo\Git\Repository;
 use Contao\Monorepo\Git\Tree;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
 
 class Splitter
 {
     private $monorepoUrl;
     private $repoUrlsByFolder;
+    private $cacheDir;
+    private $objectsCachePath;
+    private $repository;
 
-    public function __construct(string $monorepoUrl, array $repoUrlsByFolder)
+    /**
+     * @var OutputInterface
+     */
+    private $output;
+
+    /**
+     * @var Commit[]
+     */
+    private $newCommits = [];
+
+    /**
+     * @var array<string,Commit>
+     */
+    private $commitCache = [];
+
+    /**
+     * @var array<string,Tree>
+     */
+    private $treeCache = [];
+
+    public function __construct(string $monorepoUrl, array $repoUrlsByFolder, string $cacheDir, OutputInterface $output)
     {
         $this->monorepoUrl = $monorepoUrl;
         $this->repoUrlsByFolder = $repoUrlsByFolder;
+        $this->cacheDir = $cacheDir;
+        $this->objectsCachePath = $cacheDir.'/objects-v1.cache';
+        $this->output = $output;
+
+        if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
+            throw new \RuntimeException(sprintf('Unable to create directory %s', $cacheDir));
+        }
     }
 
-    public function splitRepos()
+    public function split()
     {
-        $dir = __DIR__.'/split-tmp';
-        $this->execute('rm -rf '.escapeshellarg($dir));
-        mkdir($dir, 0777, true);
-        $this->execute('cd '.escapeshellarg($dir));
-        chdir($dir);
-        $this->execute('git init .');
-        $this->execute('git remote add mono '.escapeshellarg($this->monorepoUrl));
-        $this->execute('git fetch --no-tags mono');
-        $this->execute('git fetch --no-tags mono'.' "+refs/tags/*:refs/tags/remote/mono/*"');
-
-        $branchCommits = [];
-        foreach ($this->run('git branch -r | grep '.escapeshellarg('mono/*')) as $branch) {
-            if ($branch === '') {
-                continue;
-            }
-            $branch = substr(trim($branch), strlen('mono') + 1);
-            $branchCommits[$branch] = $this->run('git rev-parse '.escapeshellarg('mono/'.$branch))[0];
+        if (file_exists($this->objectsCachePath)) {
+            $this->output->writeln('Load data from cache...');
+            [$this->commitCache, $this->treeCache] = unserialize(
+                file_get_contents($this->objectsCachePath),
+                [Commit::class, Tree::class]
+            );
         }
 
+        $this->newCommits = [];
+
+        (new Filesystem())->remove($this->cacheDir.'/repo');
+        (new Filesystem())->mkdir($this->cacheDir.'/repo');
+
+        $this->output->writeln('Load monorepo...');
+
+        $this->repository = new Repository($this->cacheDir.'/repo', $this->output);
+        $this->repository
+            ->init()
+            ->addRemote('mono', $this->monorepoUrl)
+            ->fetch('mono')
+            ->fetchTags('mono', 'remote/mono/')
+        ;
+
+        $branchCommits = $this->repository->getRemoteBranches('mono');
+
+        $this->output->writeln('Read commits...');
         $commitObjects = $this->readCommits(array_values($branchCommits));
 
         if (empty($commitObjects)) {
-            $this->exitWithFailure("No commits found for: ".print_r($branchCommits, true));
+            throw new \RuntimeException(sprintf('No commits found for: %s', print_r($branchCommits, true)));
         }
 
+        $this->output->writeln('Split commits...');
         $hashMapping = $this->splitCommits($commitObjects, $this->repoUrlsByFolder);
 
         if (empty($hashMapping)) {
-            $this->exitWithFailure("No hash mapping for commits: ".print_r($commitObjects, true));
+            throw new \RuntimeException(sprintf('No hash mapping for commits: %s', print_r($commitObjects, true)));
         }
 
+        $this->output->writeln('Save new commits...');
+        foreach ($this->newCommits as $newCommit) {
+            $this->repository->addCommit($newCommit);
+        }
+
+        $this->output->writeln('Create branches...');
         foreach ($branchCommits as $branch => $commit) {
             foreach ($this->repoUrlsByFolder as $subRepo => $remote) {
                 if (isset($hashMapping[$subRepo][$commit])) {
-                    $this->execute('mkdir -p '.escapeshellarg(dirname('.git/refs/heads/'.$subRepo.'/'.$branch)));
-                    $this->execute('echo '.escapeshellarg($hashMapping[$subRepo][$commit]).' > '.escapeshellarg('.git/refs/heads/'.$subRepo.'/'.$branch));
+                    $this->repository->addBranch($subRepo.'/'.$branch, $hashMapping[$subRepo][$commit]);
                 }
             }
         }
 
-        foreach ($GLOBALS['newCommits'] as $newCommit) {
-            $hash = $newCommit->getHash();
-            $path = __DIR__.'/split-tmp/.git/objects/'.substr($hash, 0, 2).'/'.substr($hash, 2);
-            if (!is_dir(dirname($path))) {
-                mkdir(dirname($path), 0777, true);
-            }
-            file_put_contents($path, $newCommit->getGitObjectBytes());
-        }
+        $this->output->writeln('Update cache...');
+        file_put_contents($this->objectsCachePath, serialize([$this->commitCache, $this->treeCache]));
+
+        $this->output->writeln('Done 🎉');
 
         /*
-        while (count($GLOBALS['newCommits'])) {
+        while (count($this->newCommits)) {
             $commands = [];
-            for ($i=0; $i < 200 && count($GLOBALS['newCommits']); $i++) {
-                $commands[] = 'echo '.bin2hex(array_shift($GLOBALS['newCommits'])).' | xxd -r -p | git hash-object -t commit -w --stdin --literally';
+            for ($i=0; $i < 200 && count($this->newCommits); $i++) {
+                $commands[] = 'echo '.bin2hex(array_shift($this->newCommits)).' | xxd -r -p | git hash-object -t commit -w --stdin --literally';
             }
             $this->run(implode(' ; ', $commands));
         }
@@ -90,7 +132,7 @@ class Splitter
             'echo '
             .implode(
                 ' | xxd -r -p | git hash-object -t commit -w --stdin; echo ',
-                array_map('bin2hex', $GLOBALS['newCommits'])
+                array_map('bin2hex', $this->newCommits)
             )
             .' | xxd -r -p | git hash-object -t commit -w --stdin'
         );
@@ -166,10 +208,10 @@ class Splitter
             return $commitObject->getParentHashes()[0];
         }
 
-        $GLOBALS['newCommits'][] = $commitObject;
+        $this->newCommits[] = $commitObject;
         $newHash = $commitObject->getHash();
 
-        $GLOBALS['cache']['commits'][$newHash] = $commitObject;
+        $this->commitCache[$newHash] = $commitObject;
 
         return $newHash;
     }
@@ -195,13 +237,13 @@ class Splitter
 
     private function getTreeObject($hash)
     {
-        if (isset($GLOBALS['cache']['trees'][$hash])) {
-            return $GLOBALS['cache']['trees'][$hash];
+        if (isset($this->treeCache[$hash])) {
+            return $this->treeCache[$hash];
         }
 
-        $tree = new Tree(implode("\n", $this->run('git cat-file -p '.$hash)));
+        $tree = $this->repository->getTree($hash);
 
-        $GLOBALS['cache']['trees'][$hash] = $tree;
+        $this->treeCache[$hash] = $tree;
 
         return $tree;
     }
@@ -213,45 +255,14 @@ class Splitter
 
     private function getCommitObject($hash)
     {
-        if (isset($GLOBALS['cache']['commits'][$hash])) {
-            return $GLOBALS['cache']['commits'][$hash];
+        if (isset($this->commitCache[$hash])) {
+            return $this->commitCache[$hash];
         }
 
-        $commit = new Commit(implode("\n", $this->run('git cat-file commit '.$hash)));
+        $commit = $this->repository->getCommit($hash);
 
-        $GLOBALS['cache']['commits'][$hash] = $commit;
+        $this->commitCache[$hash] = $commit;
 
         return $commit;
     }
-
-    private function run($command, $exitOnFailure = true)
-    {
-        #echo("   $ ".$command."\n");
-        echo '.';
-        ob_start();
-        system($command, $exitCode);
-        $output = explode("\n", ob_get_clean());
-        if ($exitCode !== 0 && $exitOnFailure) {
-            $this->exitWithFailure('Failed, exit code ' . var_export($exitCode, true));
-        }
-        return $output;
-    }
-
-    private function execute($command, $exitOnFailure = true)
-    {
-        echo("   $ ".$command."\n");
-        system($command, $exitCode);
-        if ($exitCode !== 0 && $exitOnFailure) {
-            $this->exitWithFailure('Failed, exit code ' . var_export($exitCode, true));
-        }
-    }
-
-    private function exitWithFailure($message = '')
-    {
-        echo "\033[41m\n\n"; // red background
-        echo "FAILURE: ".$message;
-        echo "\n\033[0m\n";
-        exit(1);
-    }
-
 }
