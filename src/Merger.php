@@ -20,6 +20,19 @@ use Symfony\Component\Process\Process;
 
 class Merger
 {
+    const VERSION_MAPPING = [
+        '0-RC5' => '0-RC4',
+        '0-RC4' => '0-RC3',
+        '0-RC3' => '0-RC2',
+        '0-RC2' => '0-RC1',
+        '0-RC1' => '0-beta5',
+        '0-beta5' => '0-beta4',
+        '0-beta4' => '0-beta3',
+        '0-beta3' => '0-beta2',
+        '0-beta2' => '0-beta1',
+        '0-beta1' => '0',
+    ];
+
     private $monorepoUrl;
     private $repoUrlsByFolder;
 
@@ -49,6 +62,11 @@ class Merger
      */
     private $treeCache = [];
 
+    /**
+     * @var array<string,array<string,string>>
+     */
+    private $exportMappingByFolder = [];
+
     public function __construct(string $monorepoUrl, array $repoUrlsByFolder, array $ignoreCommits, string $cacheDir, OutputInterface $output)
     {
         $this->monorepoUrl = $monorepoUrl;
@@ -67,7 +85,7 @@ class Merger
         (new Filesystem())->remove($this->cacheDir.'/repo');
         (new Filesystem())->mkdir($this->cacheDir.'/repo');
 
-        $this->output->writeln('Load repositories...');
+        $this->output->writeln("\nLoad repositories...");
 
         $this->repository = new Repository($this->cacheDir.'/repo', $this->output);
         $this->repository
@@ -82,10 +100,13 @@ class Merger
             ;
         }
 
+        $this->output->writeln("\nMerge repositories...");
         $mainCommits = [];
         foreach($this->repoUrlsByFolder as $subFolder => $remote) {
-            $mainCommits[$subFolder] = $this->mergeRepo($subFolder, $remote);
+            $mainCommits[$subFolder] = $this->mergeRepo($subFolder);
         }
+
+        $this->output->writeln("\nCreate branches and tags...");
 
         $trees = [];
         foreach($mainCommits as $subFolder => $commits) {
@@ -119,33 +140,39 @@ class Merger
                 $this->repository->commitTree(
                     $this->combineTrees($treeByFolder),
                     'Monorepo Version '.$tag,
-                    array_map(
-                        function($commits) use($tag) {
+                    array_filter(array_map(
+                        function($commits, $subFolder) use($tag) {
                             while (!isset($commits['tags'][$tag])) {
                                 $parts = explode('.', $tag);
                                 if (isset($parts[2]) && is_numeric($parts[2]) && (int) $parts[2] > 0) {
                                     $parts[2]--;
                                     $tag = implode('.', $parts);
                                 }
-                                elseif (isset($parts[2]) && $parts[2] === '0-RC1') {
-                                    $parts[2] = '0';
+                                elseif (isset($parts[2]) && isset(self::VERSION_MAPPING[$parts[2]])) {
+                                    $parts[2] = self::VERSION_MAPPING[$parts[2]];
                                     $tag = implode('.', $parts);
                                 }
                                 else {
-                                    throw new \RuntimeException(sprintf('Missing tag %s.', $tag));
+                                    $this->output->writeln("\e[41m\n\n  Missing $tag in $subFolder\n\e[0m");
+                                    return null;
                                 }
                             }
                             return $commits['tags'][$tag];
                         },
-                        $mainCommits
-                    ),
+                        $mainCommits,
+                        array_keys($mainCommits)
+                    )),
                     true
                 )
             );
         }
+
+        $this->output->writeln("\nDone 🎉");
+        $this->output->writeln('Use this mapping for the split configuration:');
+        $this->output->writeln(var_export($this->exportMappingByFolder, true));
     }
 
-    private function mergeRepo($subFolder, $remote)
+    private function mergeRepo($subFolder)
     {
         $branchCommits = $this->repository->getRemoteBranches($subFolder);
 
@@ -172,6 +199,7 @@ class Merger
         $return = [];
         foreach ($branchCommits as $branch => $commit) {
             $return['branches'][$branch] = $hashMapping[$commit];
+            $this->exportMappingByFolder[$subFolder][$hashMapping[$commit]] = $commit;
         }
 
         foreach ($this->repository->getTags('remote/'.$subFolder.'/') as $tag => $commitHash) {
