@@ -75,6 +75,13 @@ class Splitter
             ->fetchTags('mono', 'remote/mono/')
         ;
 
+        foreach ($this->repoUrlsByFolder as $subFolder => $config) {
+            $this->repository
+                ->addRemote($subFolder, $config['url'])
+                ->fetch($subFolder)
+            ;
+        }
+
         $branchCommits = $this->repository->getRemoteBranches('mono');
 
         $this->output->writeln("\nRead commits...");
@@ -93,7 +100,7 @@ class Splitter
 
         $this->output->writeln("\nCreate branches...");
         foreach ($branchCommits as $branch => $commit) {
-            foreach ($this->repoUrlsByFolder as $subRepo => $remote) {
+            foreach ($this->repoUrlsByFolder as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$commit])) {
                     $this->repository->addBranch($subRepo.'/'.$branch, $hashMapping[$subRepo][$commit]);
                 }
@@ -109,17 +116,20 @@ class Splitter
     private function splitCommits(array $commitObjects, array $subRepos)
     {
         $hashMapping = [];
+        foreach ($subRepos as $subRepo => $config) {
+            $hashMapping[$subRepo] = $config['mapping'];
+        }
         $pending = array_keys($commitObjects);
         while(count($pending)) {
             $current = array_pop($pending);
-            foreach ($subRepos as $subRepo => $remote) {
+            foreach ($subRepos as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$current])) {
                     continue 2;
                 }
             }
             $missingParents = [];
             foreach ($commitObjects[$current]->getParentHashes() as $parent) {
-                foreach ($subRepos as $subRepo => $remote) {
+                foreach ($subRepos as $subRepo => $config) {
                     if (isset($hashMapping[$subRepo][$parent])) {
                         continue 2;
                     }
@@ -143,16 +153,21 @@ class Splitter
         $newCommits = [];
         $treeObject = $this->getTreeObject($treeHash);
         $failure = true;
-        foreach ($subRepos as $subRepo => $remote) {
-            if (!$treeObject->getSubtreeHash($subRepo)) {
-                continue;
+        foreach ($subRepos as $subRepo => $config) {
+            $subTreeHash = $treeObject->getSubtreeHash($subRepo);
+            if (!$subTreeHash) {
+                if ($treeHash === '4b825dc642cb6eb9a060e54bf8d69288fbee4904') {
+                    $subTreeHash = $treeHash;
+                }
+                else {
+                    continue;
+                }
             }
-            $hashMapping[$subRepo][$commitHash] = $this->createNewCommit($commitHash, $treeObject->getSubtreeHash($subRepo), $hashMapping[$subRepo]);
+            $hashMapping[$subRepo][$commitHash] = $this->createNewCommit($commitHash, $subTreeHash, $hashMapping[$subRepo]);
             $failure = false;
         }
         if ($failure) {
-            var_export($treeObject);
-            throw new \RuntimeException('No subfolder found in '.$commitHash);
+            throw new \RuntimeException(sprintf('No subfolder found in commit %s. %s', $commitHash, print_r($treeObject, true)));
         }
     }
 
