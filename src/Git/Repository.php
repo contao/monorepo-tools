@@ -128,10 +128,27 @@ class Repository
         return new Tree(implode("\n", $this->run('git --git-dir='.escapeshellarg($this->path.'/.git').' cat-file tree '.escapeshellarg($hash))));
     }
 
-    public function commitTree(string $treeHash, string $message, array $parents = []): string
+    public function commitTree(string $treeHash, string $message, array $parents = [], bool $copyDateFromParents = false): string
     {
+        $prefix = '';
+        if ($copyDateFromParents) {
+            $date = null;
+            foreach ($parents as $parentHash) {
+                $parentDate = $this->getCommit($parentHash)->getCommitterDate();
+                if (!$date || $parentDate > $date) {
+                    $date = $parentDate;
+                }
+            }
+            if ($date) {
+                $prefix =
+                    'GIT_AUTHOR_DATE='.escapeshellarg($date->format('U O'))
+                    .' GIT_COMMITTER_DATE='.escapeshellarg($date->format('U O')).' '
+                ;
+            }
+        }
         return $this->run(
-            'git --git-dir='.escapeshellarg($this->path.'/.git').' commit-tree'
+            $prefix
+            .'git --git-dir='.escapeshellarg($this->path.'/.git').' commit-tree'
             .' -p '.implode(' -p ', array_map('escapeshellarg', $parents))
             .' -m '.escapeshellarg($message)
             .' '.$treeHash

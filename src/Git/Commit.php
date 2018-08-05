@@ -43,6 +43,25 @@ class Commit extends GitObject
         return $this->parents;
     }
 
+    public function getCommitterDate(): \DateTime
+    {
+        foreach (explode("\n", $this->getRaw()) as $line) {
+            if ($line === '') {
+                break;
+            }
+            if (strncmp($line, 'committer ', 10) === 0) {
+                $parts = explode(' ', $line);
+                return \DateTime::createFromFormat(
+                    'U',
+                    $parts[\count($parts) - 2],
+                    new \DateTimeZone($parts[\count($parts) - 1])
+                );
+            }
+        }
+
+        throw new \RuntimeException('Missing committer date.');
+    }
+
     public function withNewTreeAndParents(string $tree, array $parents): self
     {
         $raw = explode("\n", $this->getRaw());
