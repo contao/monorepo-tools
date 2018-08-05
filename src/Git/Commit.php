@@ -10,19 +10,17 @@
 
 namespace Contao\Monorepo\Git;
 
-class Commit
+class Commit extends GitObject
 {
-    private $raw;
-
     private $tree;
 
     private $parents = [];
 
     public function __construct(string $rawCommit)
     {
-        $this->raw = $rawCommit;
+        parent::__construct($rawCommit);
 
-        foreach (explode("\n", $this->raw) as $line) {
+        foreach (explode("\n", $this->getRaw()) as $line) {
             if ($line === '') {
                 break;
             }
@@ -35,11 +33,6 @@ class Commit
         }
     }
 
-    public function getHash(): string
-    {
-        return sha1('commit '.strlen($this->raw)."\0".$this->raw);
-    }
-
     public function getTreeHash(): string
     {
         return $this->tree;
@@ -50,21 +43,16 @@ class Commit
         return $this->parents;
     }
 
-    public function getGitObjectBytes(): string
-    {
-        return gzdeflate('commit '.strlen($this->raw)."\0".$this->raw, -1, ZLIB_ENCODING_DEFLATE);
-    }
-
     public function withNewTreeAndParents(string $tree, array $parents): self
     {
-        $raw = explode("\n", $this->raw);
+        $raw = explode("\n", $this->getRaw());
         foreach ($raw as $num => $line) {
             if ($line === '') {
                 break;
             }
             if (strncmp($line, 'tree ', 5) === 0) {
                 $raw[$num] = 'tree '.$tree;
-                if (count($parents)) {
+                if (\count($parents)) {
                     $raw[$num] .= "\nparent ".implode("\nparent ", $parents);
                 }
             }
@@ -74,5 +62,10 @@ class Commit
         }
 
         return new self(implode("\n", $raw));
+    }
+
+    protected static function getGitType(): string
+    {
+        return 'commit';
     }
 }

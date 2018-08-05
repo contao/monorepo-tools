@@ -46,6 +46,13 @@ class Repository
         return $this;
     }
 
+    public function removeRemote(string $name): self
+    {
+        $this->execute('git --git-dir='.escapeshellarg($this->path.'/.git').' remote rm '.escapeshellarg($name));
+
+        return $this;
+    }
+
     public function fetch(string $remote): self
     {
         $this->execute('git --git-dir='.escapeshellarg($this->path.'/.git').' fetch --no-tags '.escapeshellarg($remote));
@@ -80,6 +87,37 @@ class Repository
         return $branches;
     }
 
+    /**
+     * @return array<string,string>
+     */
+    public function getTags(string $prefix): array
+    {
+        $tags = [];
+        foreach ($this->run('git --git-dir='.escapeshellarg($this->path.'/.git').' tag -l '.escapeshellarg($prefix.'*')) as $tag) {
+            if ($tag === '') {
+                continue;
+            }
+            $tag = substr(trim($tag), strlen($prefix));
+            $tags[$tag] = $this->run('git --git-dir='.escapeshellarg($this->path.'/.git').' rev-list -n 1 '.escapeshellarg($prefix.$tag))[0];
+        }
+
+        return $tags;
+    }
+
+    public function addTag(string $name, string $hash): self
+    {
+        $this->execute('git --git-dir='.escapeshellarg($this->path.'/.git').' tag '.escapeshellarg($name).' '.escapeshellarg($hash));
+
+        return $this;
+    }
+
+    public function removeTag(string $name): self
+    {
+        $this->execute('git --git-dir='.escapeshellarg($this->path.'/.git').' tag -d '.escapeshellarg($name));
+
+        return $this;
+    }
+
     public function getCommit(string $hash): Commit
     {
         return new Commit(implode("\n", $this->run('git --git-dir='.escapeshellarg($this->path.'/.git').' cat-file commit '.escapeshellarg($hash))));
@@ -87,7 +125,17 @@ class Repository
 
     public function getTree(string $hash): Tree
     {
-        return new Tree(implode("\n", $this->run('git --git-dir='.escapeshellarg($this->path.'/.git').' cat-file -p '.escapeshellarg($hash))));
+        return new Tree(implode("\n", $this->run('git --git-dir='.escapeshellarg($this->path.'/.git').' cat-file tree '.escapeshellarg($hash))));
+    }
+
+    public function commitTree(string $treeHash, string $message, array $parents = []): string
+    {
+        return $this->run(
+            'git --git-dir='.escapeshellarg($this->path.'/.git').' commit-tree'
+            .' -p '.implode(' -p ', array_map('escapeshellarg', $parents))
+            .' -m '.escapeshellarg($message)
+            .' '.$treeHash
+        )[0];
     }
 
     public function addBranch(string $name, string $hash): self
@@ -103,16 +151,16 @@ class Repository
         return $this;
     }
 
-    public function addCommit(Commit $commit): self
+    public function addObject(GitObject $object): self
     {
-        $hash = $commit->getHash();
+        $hash = $object->getHash();
         $path = $this->path.'/.git/objects/'.substr($hash, 0, 2).'/'.substr($hash, 2);
 
         if (!is_dir(\dirname($path)) && !mkdir(\dirname($path), 0777, true) && !is_dir(\dirname($path))) {
             throw new \RuntimeException(sprintf('Unable to create directory %s', \dirname($path)));
         }
 
-        file_put_contents($path, $commit->getGitObjectBytes());
+        file_put_contents($path, $object->getGitObjectBytes());
 
         return $this;
     }

@@ -5,9 +5,11 @@ require __DIR__.'/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
 use Contao\Monorepo\Command\SplitCommand;
+use Contao\Monorepo\Command\MergeCommand;
 
 $application = new Application();
 
 $application->add(new SplitCommand());
+$application->add(new MergeCommand());
 
 $application->run();

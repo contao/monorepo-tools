@@ -30,11 +30,6 @@ class Splitter
     private $output;
 
     /**
-     * @var Commit[]
-     */
-    private $newCommits = [];
-
-    /**
      * @var array<string,Commit>
      */
     private $commitCache = [];
@@ -60,19 +55,17 @@ class Splitter
     public function split()
     {
         if (file_exists($this->objectsCachePath)) {
-            $this->output->writeln('Load data from cache...');
+            $this->output->writeln("\nLoad data from cache...");
             [$this->commitCache, $this->treeCache] = unserialize(
                 file_get_contents($this->objectsCachePath),
                 [Commit::class, Tree::class]
             );
         }
 
-        $this->newCommits = [];
-
         (new Filesystem())->remove($this->cacheDir.'/repo');
         (new Filesystem())->mkdir($this->cacheDir.'/repo');
 
-        $this->output->writeln('Load monorepo...');
+        $this->output->writeln("\nLoad monorepo...");
 
         $this->repository = new Repository($this->cacheDir.'/repo', $this->output);
         $this->repository
@@ -84,26 +77,21 @@ class Splitter
 
         $branchCommits = $this->repository->getRemoteBranches('mono');
 
-        $this->output->writeln('Read commits...');
+        $this->output->writeln("\nRead commits...");
         $commitObjects = $this->readCommits(array_values($branchCommits));
 
         if (empty($commitObjects)) {
             throw new \RuntimeException(sprintf('No commits found for: %s', print_r($branchCommits, true)));
         }
 
-        $this->output->writeln('Split commits...');
+        $this->output->writeln("\nSplit commits...");
         $hashMapping = $this->splitCommits($commitObjects, $this->repoUrlsByFolder);
 
         if (empty($hashMapping)) {
             throw new \RuntimeException(sprintf('No hash mapping for commits: %s', print_r($commitObjects, true)));
         }
 
-        $this->output->writeln('Save new commits...');
-        foreach ($this->newCommits as $newCommit) {
-            $this->repository->addCommit($newCommit);
-        }
-
-        $this->output->writeln('Create branches...');
+        $this->output->writeln("\nCreate branches...");
         foreach ($branchCommits as $branch => $commit) {
             foreach ($this->repoUrlsByFolder as $subRepo => $remote) {
                 if (isset($hashMapping[$subRepo][$commit])) {
@@ -112,33 +100,10 @@ class Splitter
             }
         }
 
-        $this->output->writeln('Update cache...');
+        $this->output->writeln("\nUpdate cache...");
         file_put_contents($this->objectsCachePath, serialize([$this->commitCache, $this->treeCache]));
 
-        $this->output->writeln('Done 🎉');
-
-        /*
-        while (count($this->newCommits)) {
-            $commands = [];
-            for ($i=0; $i < 200 && count($this->newCommits); $i++) {
-                $commands[] = 'echo '.bin2hex(array_shift($this->newCommits)).' | xxd -r -p | git hash-object -t commit -w --stdin --literally';
-            }
-            $this->run(implode(' ; ', $commands));
-        }
-        */
-
-        /*
-        $this->run(
-            'echo '
-            .implode(
-                ' | xxd -r -p | git hash-object -t commit -w --stdin; echo ',
-                array_map('bin2hex', $this->newCommits)
-            )
-            .' | xxd -r -p | git hash-object -t commit -w --stdin'
-        );
-        */
-
-        #$this->execute('git remote rm '.escapeshellarg($subFolder));
+        $this->output->writeln("\nDone 🎉");
     }
 
     private function splitCommits(array $commitObjects, array $subRepos)
@@ -187,7 +152,7 @@ class Splitter
         }
         if ($failure) {
             var_export($treeObject);
-            throw new Exception('No subfolder found in '.$commitHash);
+            throw new \RuntimeException('No subfolder found in '.$commitHash);
         }
     }
 
@@ -204,11 +169,12 @@ class Splitter
 
         $commitObject = $commitObject->withNewTreeAndParents($tree, $newParents);
 
-        if (count($commitObject->getParentHashes()) === 1 && $this->getTreeHashFromCommitHash($commitObject->getParentHashes()[0]) === $tree) {
+        if (\count($commitObject->getParentHashes()) === 1 && $this->getCommitObject($commitObject->getParentHashes()[0])->getTreeHash() === $tree) {
             return $commitObject->getParentHashes()[0];
         }
 
-        $this->newCommits[] = $commitObject;
+        $this->repository->addObject($commitObject);
+
         $newHash = $commitObject->getHash();
 
         $this->commitCache[$newHash] = $commitObject;
@@ -246,11 +212,6 @@ class Splitter
         $this->treeCache[$hash] = $tree;
 
         return $tree;
-    }
-
-    private function getTreeHashFromCommitHash($commitHash)
-    {
-        return $this->getCommitObject($commitHash)->getTreeHash();
     }
 
     private function getCommitObject($hash)
