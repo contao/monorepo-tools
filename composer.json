@@ -1,7 +1,7 @@
 {
-    "name": "contao/monorepo",
+    "name": "contao/monorepo-tools",
     "type": "library",
-    "description": "Contao mono repo helper",
+    "description": "Contao Monorepo Tools",
     "license": "LGPL-3.0-or-later",
     "authors": [
         {
