@@ -123,7 +123,7 @@ class Merger
                 $branch,
                 $this->repository->commitTree(
                     $this->combineTrees($treeByFolder),
-                    'MERGE 🎉',
+                    'Merge the bundles into the '.$branch.' branch.',
                     array_filter(array_map(
                         function($commits) use($branch) {
                             return $commits['branches'][$branch] ?? null;
@@ -139,7 +139,7 @@ class Merger
                 $tag,
                 $this->repository->commitTree(
                     $this->combineTrees($treeByFolder),
-                    'Monorepo Version '.$tag,
+                    'Version '.$tag.'.',
                     array_filter(array_map(
                         function($commits, $subFolder) use($tag) {
                             while (!isset($commits['tags'][$tag])) {
@@ -250,7 +250,7 @@ class Merger
     private function moveCommitToSubfolder($commit, $tree, &$hashMapping, string $subFolder)
     {
         $newTree = $this->createTree($subFolder, $tree);
-        return $this->createNewCommit($commit, $newTree, $hashMapping);
+        return $this->createNewCommit($commit, $newTree, $hashMapping, $subFolder);
     }
 
     private function createTree(string $subFolder, string $subTree)
@@ -277,19 +277,20 @@ class Merger
         return $tree->getHash();
     }
 
-    private function createNewCommit(string $commitHash, string $treeHash, array &$hashMapping): string
+    private function createNewCommit(string $commitHash, string $treeHash, array &$hashMapping, string $subFolder): string
     {
         $oldCommit = $this->getCommitObject($commitHash);
 
-        $newCommit = $oldCommit->withNewTreeAndParents(
-            $treeHash,
-            array_filter(array_map(function($parentHash) use (&$hashMapping) {
+        $newCommit = $oldCommit
+            ->withMessage('['.ucfirst(explode('-', $subFolder)[0]).'] '.$oldCommit->getMessage())
+            ->withTree($treeHash)
+            ->withParents(array_filter(array_map(function($parentHash) use (&$hashMapping) {
                 return \in_array($parentHash, $this->ignoreCommits, true)
                     ? null
                     : $hashMapping[$parentHash]
                 ;
-            }, $oldCommit->getParentHashes()))
-        );
+            }, $oldCommit->getParentHashes())))
+        ;
 
         $this->repository->addObject($newCommit);
 

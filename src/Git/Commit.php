@@ -62,7 +62,35 @@ class Commit extends GitObject
         throw new \RuntimeException('Missing committer date.');
     }
 
-    public function withNewTreeAndParents(string $tree, array $parents): self
+    public function getMessage(): string
+    {
+        $raw = $this->getRaw();
+        $messageOffset = strpos($raw, "\n\n");
+
+        if ($messageOffset === false) {
+            throw new \RuntimeException('Missing commit message.');
+        }
+
+        return substr($raw, $messageOffset + 2);
+    }
+
+    public function withMessage(string $message): self
+    {
+        $raw = $this->getRaw();
+        $messageOffset = strpos($raw, "\n\n");
+
+        if ($messageOffset === false) {
+            throw new \RuntimeException('Missing commit message.');
+        }
+
+        return new self(
+            substr($raw, 0, $messageOffset)
+            ."\n\n"
+            .$message
+        );
+    }
+
+    public function withTree(string $hash): self
     {
         $raw = explode("\n", $this->getRaw());
         foreach ($raw as $num => $line) {
@@ -70,9 +98,24 @@ class Commit extends GitObject
                 break;
             }
             if (strncmp($line, 'tree ', 5) === 0) {
-                $raw[$num] = 'tree '.$tree;
-                if (\count($parents)) {
-                    $raw[$num] .= "\nparent ".implode("\nparent ", $parents);
+                $raw[$num] = 'tree ' . $hash;
+                break;
+            }
+        }
+
+        return new self(implode("\n", $raw));
+    }
+
+    public function withParents(array $hashes): self
+    {
+        $raw = explode("\n", $this->getRaw());
+        foreach ($raw as $num => $line) {
+            if ($line === '') {
+                break;
+            }
+            if (strncmp($line, 'tree ', 5) === 0) {
+                if (\count($hashes)) {
+                    $raw[$num] .= "\nparent ".implode("\nparent ", $hashes);
                 }
             }
             elseif (strncmp($line, 'parent ', 7) === 0) {
