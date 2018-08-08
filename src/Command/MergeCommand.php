@@ -47,26 +47,6 @@ class MergeCommand extends Command
                 'newsletter-bundle' => 'git@github.com:contao/newsletter-bundle.git',
             ],
             [
-                // Calendar
-                'f814d9cb143fe1ea33ab0969df7c294c3d809530',
-                'ed3c42febaf2bd3d5b402e85c9488a3a667d8a61',
-                // Comments
-                '2dc22646960c53a5ccf49747da94fed7bce3aeff',
-                '94c695e77e0d896093a0a9cdc5a6f40961d2d710',
-                // Core
-                '6ae21d689a10f038553725baa5faa15a5cdc35b7',
-                '83998f6f9a3fedb835911348427706de5157a37c',
-                // Faq
-                'a543b68804067593e911f72c82ad5f6147c386f5',
-                '728306aa0899a217f9d4c914de0febcafdbaad5f',
-                // Listing
-                '581b17b6a6eed3fb5165150f9209212c925e868e',
-                // News
-                '48715f3ba9a2f4f92992c0cfcae15533b488e0ed',
-                '49c24af583ca059138af303663d462a335968929',
-                // Newsletter
-                '179eaa9a8e502becf11848f7f169603005079d1d',
-                'b2bfd3e87e9a24c6a4826170ce07a6065e0a4cd4',
             ],
             \dirname(__DIR__, 2).'/merge-cache',
             $output
