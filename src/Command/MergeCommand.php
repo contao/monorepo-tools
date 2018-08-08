@@ -47,19 +47,26 @@ class MergeCommand extends Command
                 'newsletter-bundle' => 'git@github.com:contao/newsletter-bundle.git',
             ],
             [
-                /*
-                // Listing
-                'dea5b1bf4913dfc67961b2352936fcf8abbf88fb',
-                'e4fe9c298575eefdef2b4a4db00618293be1186c',
-                '3c0f4c8996fed49048c3eb75c4515eb7c21dc5f6',
-                'd064268aceb6ff66c053c0045911466879b755fe',
+                // Calendar
+                'f814d9cb143fe1ea33ab0969df7c294c3d809530',
+                'ed3c42febaf2bd3d5b402e85c9488a3a667d8a61',
+                // Comments
+                '2dc22646960c53a5ccf49747da94fed7bce3aeff',
+                '94c695e77e0d896093a0a9cdc5a6f40961d2d710',
+                // Core
+                '6ae21d689a10f038553725baa5faa15a5cdc35b7',
+                '83998f6f9a3fedb835911348427706de5157a37c',
                 // Faq
-                'cef918e98ef0c42afa8745e9b3901b5c9b276169',
-                '238104fcd5af740883096914c5e12afcbc81c107',
-                '72417c996b78f139d35488a2589e91ce049a868e',
-                '332b5d7e98c406814a7b734c766c29bd5d4f4fba',
-                'ce9f2b63c397f82079faa2c473fc923555ad0f90',
-                */
+                'a543b68804067593e911f72c82ad5f6147c386f5',
+                '728306aa0899a217f9d4c914de0febcafdbaad5f',
+                // Listing
+                '581b17b6a6eed3fb5165150f9209212c925e868e',
+                // News
+                '48715f3ba9a2f4f92992c0cfcae15533b488e0ed',
+                '49c24af583ca059138af303663d462a335968929',
+                // Newsletter
+                '179eaa9a8e502becf11848f7f169603005079d1d',
+                'b2bfd3e87e9a24c6a4826170ce07a6065e0a4cd4',
             ],
             \dirname(__DIR__, 2).'/merge-cache',
             $output
