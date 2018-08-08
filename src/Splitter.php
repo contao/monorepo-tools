@@ -171,28 +171,30 @@ class Splitter
         }
     }
 
-    private function createNewCommit(string $commit, string $tree, &$hashMapping)
+    private function createNewCommit(string $commitHash, string $treeHash, &$hashMapping)
     {
-        $commitObject = $this->getCommitObject($commit);
+        $commit = $this->getCommitObject($commitHash);
 
         $newParents = [];
-        foreach ($commitObject->getParentHashes() as $parent) {
-            if (isset($hashMapping[$parent]) && !in_array($hashMapping[$parent], $newParents)) {
+        foreach ($commit->getParentHashes() as $parent) {
+            if (isset($hashMapping[$parent]) && !\in_array($hashMapping[$parent], $newParents, true)) {
                 $newParents[] = $hashMapping[$parent];
             }
         }
 
-        $commitObject = $commitObject->withNewTreeAndParents($tree, $newParents);
-
-        if (\count($commitObject->getParentHashes()) === 1 && $this->getCommitObject($commitObject->getParentHashes()[0])->getTreeHash() === $tree) {
-            return $commitObject->getParentHashes()[0];
+        foreach ($newParents as $parentHash) {
+            if ($this->getCommitObject($parentHash)->getTreeHash() === $treeHash) {
+                return $parentHash;
+            }
         }
 
-        $this->repository->addObject($commitObject);
+        $newCommit = $commit->withTree($treeHash)->withParents($newParents);
 
-        $newHash = $commitObject->getHash();
+        $this->repository->addObject($newCommit);
 
-        $this->commitCache[$newHash] = $commitObject;
+        $newHash = $newCommit->getHash();
+
+        $this->commitCache[$newHash] = $newCommit;
 
         return $newHash;
     }
