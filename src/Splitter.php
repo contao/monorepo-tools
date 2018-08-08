@@ -80,6 +80,20 @@ class Splitter
                 ->addRemote($subFolder, $config['url'])
                 ->fetch($subFolder)
             ;
+            foreach ($config['mapping'] as $monoHash => $splitHash) {
+                $monoTreeHash = $this->getTreeObject(
+                    $this->getCommitObject($monoHash)->getTreeHash()
+                )->getSubtreeHash($subFolder);
+                $splitTreeHash = $this->getCommitObject($splitHash)->getTreeHash();
+                if ($monoTreeHash !== $splitTreeHash) {
+                    throw new \RuntimeException(sprintf(
+                        'Invalid mapping from %s to %s. Tree for folder %s does not match.',
+                        $monoHash,
+                        $splitHash,
+                        $subFolder
+                    ));
+                }
+            }
         }
 
         $branchCommits = $this->repository->getRemoteBranches('mono');
