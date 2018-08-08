@@ -210,6 +210,11 @@ class Splitter
                 continue;
             }
             $commits[$current] = $this->getCommitObject($current);
+            foreach ($this->repoUrlsByFolder as $config) {
+                if (isset($config['mapping'][$current])) {
+                    continue 2;
+                }
+            }
             foreach($commits[$current]->getParentHashes() as $parent) {
                 $pending[] = $parent;
             }
@@ -218,7 +223,7 @@ class Splitter
         return $commits;
     }
 
-    private function getTreeObject($hash)
+    private function getTreeObject($hash): Tree
     {
         if (isset($this->treeCache[$hash])) {
             return $this->treeCache[$hash];
@@ -231,7 +236,7 @@ class Splitter
         return $tree;
     }
 
-    private function getCommitObject($hash)
+    private function getCommitObject($hash): Commit
     {
         if (isset($this->commitCache[$hash])) {
             return $this->commitCache[$hash];
