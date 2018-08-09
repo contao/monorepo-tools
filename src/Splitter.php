@@ -121,6 +121,15 @@ class Splitter
             }
         }
 
+        $this->output->writeln("\nCreate tags...");
+        foreach ($this->repository->getTags('remote/mono/') as $tag => $commit) {
+            foreach ($this->repoUrlsByFolder as $subRepo => $config) {
+                if (isset($hashMapping[$subRepo][$commit])) {
+                    $this->repository->addTag('remote/'.$subRepo.'/'.$tag, $hashMapping[$subRepo][$commit]);
+                }
+            }
+        }
+
         $this->output->writeln("\nUpdate cache...");
         file_put_contents($this->objectsCachePath, serialize([$this->commitCache, $this->treeCache]));
 
