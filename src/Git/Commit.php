@@ -74,9 +74,24 @@ class Commit extends GitObject
         return substr($raw, $messageOffset + 2);
     }
 
+    public function hasGpgSignature(): bool
+    {
+        $raw = explode("\n", $this->getRaw());
+        foreach ($raw as $num => $line) {
+            if ($line === '') {
+                break;
+            }
+            if (strncmp($line, 'gpgsig ', 7) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function withMessage(string $message): self
     {
-        $raw = $this->getRaw();
+        $raw = $this->withoutGpgSignature()->getRaw();
         $messageOffset = strpos($raw, "\n\n");
 
         if ($messageOffset === false) {
@@ -92,7 +107,7 @@ class Commit extends GitObject
 
     public function withTree(string $hash): self
     {
-        $raw = explode("\n", $this->getRaw());
+        $raw = explode("\n", $this->withoutGpgSignature()->getRaw());
         foreach ($raw as $num => $line) {
             if ($line === '') {
                 break;
@@ -108,7 +123,7 @@ class Commit extends GitObject
 
     public function withParents(array $hashes): self
     {
-        $raw = explode("\n", $this->getRaw());
+        $raw = explode("\n", $this->withoutGpgSignature()->getRaw());
         foreach ($raw as $num => $line) {
             if ($line === '') {
                 break;
@@ -119,6 +134,32 @@ class Commit extends GitObject
                 }
             }
             elseif (strncmp($line, 'parent ', 7) === 0) {
+                unset($raw[$num]);
+            }
+        }
+
+        return new self(implode("\n", $raw));
+    }
+
+    public function withoutGpgSignature(): self
+    {
+        if (!$this->hasGpgSignature()) {
+            return $this;
+        }
+
+        $raw = explode("\n", $this->getRaw());
+        $signatureStartFound = false;
+        foreach ($raw as $num => $line) {
+            if ($line === '') {
+                break;
+            }
+            if ($signatureStartFound && $line[0] === ' ') {
+                unset($raw[$num]);
+                continue;
+            }
+            $signatureStartFound = false;
+            if (strncmp($line, 'gpgsig ', 7) === 0) {
+                $signatureStartFound = true;
                 unset($raw[$num]);
             }
         }
