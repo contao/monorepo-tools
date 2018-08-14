@@ -21,7 +21,12 @@ class Splitter
     private $monorepoUrl;
     private $repoUrlsByFolder;
     private $cacheDir;
+    private $forcePush;
     private $objectsCachePath;
+
+    /**
+     * @var Repository
+     */
     private $repository;
 
     /**
@@ -39,12 +44,13 @@ class Splitter
      */
     private $treeCache = [];
 
-    public function __construct(string $monorepoUrl, array $repoUrlsByFolder, string $cacheDir, OutputInterface $output)
+    public function __construct(string $monorepoUrl, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, OutputInterface $output)
     {
         $this->monorepoUrl = $monorepoUrl;
         $this->repoUrlsByFolder = $repoUrlsByFolder;
         $this->cacheDir = $cacheDir;
         $this->objectsCachePath = $cacheDir.'/objects-v1.cache';
+        $this->forcePush = $forcePush;
         $this->output = $output;
 
         if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
@@ -113,25 +119,43 @@ class Splitter
         }
 
         $this->output->writeln("\nCreate branches...");
+        $addedBranches = [];
         foreach ($branchCommits as $branch => $commit) {
             foreach ($this->repoUrlsByFolder as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$commit])) {
                     $this->repository->addBranch($subRepo.'/'.$branch, $hashMapping[$subRepo][$commit]);
+                    $addedBranches[$subRepo][] = $branch;
                 }
             }
         }
 
         $this->output->writeln("\nCreate tags...");
+        $addedTags = [];
         foreach ($this->repository->getTags('remote/mono/') as $tag => $commit) {
             foreach ($this->repoUrlsByFolder as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$commit])) {
                     $this->repository->addTag('remote/'.$subRepo.'/'.$tag, $hashMapping[$subRepo][$commit]);
+                    $addedTags[$subRepo][] = $tag;
                 }
             }
         }
 
         $this->output->writeln("\nUpdate cache...");
         file_put_contents($this->objectsCachePath, serialize([$this->commitCache, $this->treeCache]));
+
+        $this->output->writeln("\nPush to remotes...");
+
+        foreach ($addedBranches as $subRepo => $branches) {
+            foreach ($branches as $branch) {
+                $this->repository->pushBranch($subRepo.'/'.$branch, $subRepo, $branch, $this->forcePush);
+            }
+        }
+
+        foreach ($addedTags as $subRepo => $tags) {
+            foreach ($tags as $tag) {
+                $this->repository->pushTag('remote/'.$subRepo.'/'.$tag, $subRepo, $tag, $this->forcePush);
+            }
+        }
 
         $this->output->writeln("\nDone 🎉");
     }

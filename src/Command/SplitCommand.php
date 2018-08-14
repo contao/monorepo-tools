@@ -22,6 +22,12 @@ class SplitCommand extends Command
         $this
             ->setName('split')
             ->setDescription('Split monorepo into repositories by subfolder.')
+            ->addOption(
+                'force-push',
+                null,
+                null,
+                'Force push branches and tags to splitted remotes. Dangerous!'
+            )
         ;
     }
 
@@ -136,6 +142,7 @@ class SplitCommand extends Command
             ],
             */
             \dirname(\dirname(__DIR__)).'/split-cache',
+            $input->getOption('force-push'),
             $output
         );
 

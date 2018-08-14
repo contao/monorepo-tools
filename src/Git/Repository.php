@@ -168,6 +168,33 @@ class Repository
         return $this;
     }
 
+    public function pushBranch(string $localBranch, string $remote, string $remoteBranch, bool $force = false): self
+    {
+        $this->pushRefspec('refs/heads/'.$localBranch.':refs/heads/'.$remoteBranch, $remote, $force);
+
+        return $this;
+    }
+
+    public function pushTag(string $localTag, string $remote, string $remoteTag, bool $force = false): self
+    {
+        $this->pushRefspec('refs/tags/'.$localTag.':refs/tags/'.$remoteTag, $remote, $force);
+
+        return $this;
+    }
+
+    private function pushRefspec(string $refspec, string $remote, bool $force): void
+    {
+        $command = 'git --git-dir='.escapeshellarg($this->path.'/.git').' push';
+
+        if ($force) {
+            $command .= ' --force';
+        }
+
+        $command .= ' '.escapeshellarg($remote).' '.escapeshellarg($refspec);
+
+        $this->execute($command);
+    }
+
     public function addObject(GitObject $object): self
     {
         $hash = $object->getHash();
