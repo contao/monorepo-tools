@@ -11,6 +11,7 @@
 namespace Contao\MonorepoTools\Git;
 
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -42,6 +43,24 @@ class Repository
     public function setConfig(string $key, string $value): self
     {
         $this->execute('git --git-dir='.escapeshellarg($this->path).' config '.escapeshellarg($key).' '.escapeshellarg($value));
+
+        return $this;
+    }
+
+    public function removeRefs(): self
+    {
+        foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' remote') as $remote) {
+            if ($remote === '') {
+                continue;
+            }
+            $this->execute('git --git-dir='.escapeshellarg($this->path).' remote remove '.escapeshellarg(trim($remote)));
+        }
+
+        (new Filesystem())->remove([
+            $this->path.'/refs/heads',
+            $this->path.'/refs/remotes',
+            $this->path.'/refs/tags',
+        ]);
 
         return $this;
     }
@@ -83,11 +102,12 @@ class Repository
     public function getRemoteBranches(string $remote): array
     {
         $branches = [];
-        foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' branch -r | grep '.escapeshellarg($remote.'/*')) as $branch) {
-            if ($branch === '') {
+        foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' branch -r') as $branch) {
+            $branch = trim($branch);
+            if ($branch === '' || strncmp($branch, $remote.'/', \strlen($remote.'/')) !== 0) {
                 continue;
             }
-            $branch = substr(trim($branch), strlen($remote) + 1);
+            $branch = substr($branch, \strlen($remote.'/'));
             $branches[$branch] = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-parse '.escapeshellarg($remote.'/'.$branch))[0];
         }
 

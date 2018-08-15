@@ -68,13 +68,18 @@ class Splitter
             );
         }
 
-        (new Filesystem())->remove($this->cacheDir.'/repo.git');
-
         $this->output->writeln("\nLoad monorepo...");
 
         $this->repository = new Repository($this->cacheDir.'/repo.git', $this->output);
+
+        if (is_dir($this->cacheDir.'/repo.git')) {
+            $this->repository->removeRefs();
+        }
+        else {
+            $this->repository->init();
+        }
+
         $this->repository
-            ->init()
             ->setConfig('gc.auto', '0')
             ->addRemote('mono', $this->monorepoUrl)
             ->fetch('mono')
