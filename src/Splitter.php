@@ -13,6 +13,7 @@ namespace Contao\MonorepoTools;
 use Contao\MonorepoTools\Git\Commit;
 use Contao\MonorepoTools\Git\Repository;
 use Contao\MonorepoTools\Git\Tree;
+use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -22,6 +23,7 @@ class Splitter
     private $repoUrlsByFolder;
     private $cacheDir;
     private $forcePush;
+    private $branch;
     private $objectsCachePath;
 
     /**
@@ -44,13 +46,14 @@ class Splitter
      */
     private $treeCache = [];
 
-    public function __construct(string $monorepoUrl, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, OutputInterface $output)
+    public function __construct(string $monorepoUrl, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, ?string $branch, OutputInterface $output)
     {
         $this->monorepoUrl = $monorepoUrl;
         $this->repoUrlsByFolder = $repoUrlsByFolder;
         $this->cacheDir = $cacheDir;
         $this->objectsCachePath = $cacheDir.'/objects-v1.cache';
         $this->forcePush = $forcePush;
+        $this->branch = $branch;
         $this->output = $output;
 
         if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
@@ -108,6 +111,23 @@ class Splitter
         }
 
         $branchCommits = $this->repository->getRemoteBranches('mono');
+
+        if ($this->branch !== null) {
+
+            if (!isset($branchCommits[$this->branch])) {
+                throw new InvalidArgumentException(sprintf(
+                    'Branch %s does not exist, use one of %s',
+                    $this->branch,
+                    implode(', ', array_keys($branchCommits))
+                ));
+            }
+
+            // Only use the specified branch
+            $branchCommits = [
+                $this->branch => $branchCommits[$this->branch],
+            ];
+
+        }
 
         $this->output->writeln("\nRead commits...");
         $commitObjects = $this->readCommits(array_values($branchCommits));
