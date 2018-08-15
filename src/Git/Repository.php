@@ -261,6 +261,7 @@ class Repository
         $this->output->writeln('   $ '.$command);
 
         $process = new Process($command);
+        $process->setTimeout(600);
         $process->start();
         foreach ($process->getIterator() as $data) {
             $this->output->write($data);
