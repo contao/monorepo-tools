@@ -22,6 +22,7 @@ class SplitConfiguration implements ConfigurationInterface
 
         $rootNode
             ->children()
+                ->scalarNode('monorepo_url')->isRequired()->end()
                 ->arrayNode('repositories')
                     ->isRequired()
                     ->useAttributeAsKey('folder')

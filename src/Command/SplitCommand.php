@@ -51,7 +51,7 @@ class SplitCommand extends Command
         );
 
         $splitter = new Splitter(
-            $this->rootDir.'/.git',
+            $config['monorepo_url'],
             $config['repositories'],
             $this->rootDir.'/.monorepo-split-cache',
             $input->getOption('force-push'),
