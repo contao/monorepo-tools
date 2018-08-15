@@ -235,7 +235,9 @@ class Repository
 
         $process = new Process($command);
         $process->start();
-        $this->output->write($process->getIterator());
+        foreach ($process->getIterator() as $data) {
+            $this->output->write($data);
+        }
         $process->wait();
 
         if ($exitOnFailure && !$process->isSuccessful()) {
