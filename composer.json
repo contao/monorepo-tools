@@ -23,12 +23,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Contao\\Monorepo\\": "src/"
+            "Contao\\MonorepoTools\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Contao\\Monorepo\\Tests\\": "tests/"
+            "Contao\\MonorepoTools\\Tests\\": "tests/"
         }
     }
 }

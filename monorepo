@@ -4,8 +4,8 @@
 require __DIR__.'/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
-use Contao\Monorepo\Command\SplitCommand;
-use Contao\Monorepo\Command\MergeCommand;
+use Contao\MonorepoTools\Command\SplitCommand;
+use Contao\MonorepoTools\Command\MergeCommand;
 
 $application = new Application();
 

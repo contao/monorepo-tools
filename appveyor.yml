@@ -1,7 +1,7 @@
 build: false
 shallow_clone: true
 platform: x86
-clone_folder: C:\projects\contao-monorepo
+clone_folder: C:\projects\contao-monorepo-tools
 
 cache:
   - '%LOCALAPPDATA%\Composer\files'
@@ -34,10 +34,10 @@ install:
   - IF %PHP%==1 echo extension=php_sockets.dll >> php.ini
   - IF %PHP%==1 echo extension=php_xmlrpc.dll >> php.ini
   - IF %PHP%==1 echo extension=php_xsl.dll >> php.ini
-  - cd C:\projects\contao-monorepo
+  - cd C:\projects\contao-monorepo-tools
   - php -r "readfile('http://getcomposer.org/installer');" | php
   - php composer.phar update --no-progress --no-suggest --no-interaction --ansi
 
 test_script:
-  - cd C:\projects\contao-monorepo
+  - cd C:\projects\contao-monorepo-tools
   - vendor\bin\phpunit.bat

@@ -8,7 +8,7 @@
  * @license LGPL-3.0-or-later
  */
 
-namespace Contao\Monorepo\Git;
+namespace Contao\MonorepoTools\Git;
 
 abstract class GitObject
 {

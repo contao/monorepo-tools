@@ -8,9 +8,9 @@
  * @license LGPL-3.0-or-later
  */
 
-namespace Contao\Monorepo\Command;
+namespace Contao\MonorepoTools\Command;
 
-use Contao\Monorepo\Merger;
+use Contao\MonorepoTools\Merger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;

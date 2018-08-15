@@ -8,11 +8,11 @@
  * @license LGPL-3.0-or-later
  */
 
-namespace Contao\Monorepo;
+namespace Contao\MonorepoTools;
 
-use Contao\Monorepo\Git\Commit;
-use Contao\Monorepo\Git\Repository;
-use Contao\Monorepo\Git\Tree;
+use Contao\MonorepoTools\Git\Commit;
+use Contao\MonorepoTools\Git\Repository;
+use Contao\MonorepoTools\Git\Tree;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Exception\ProcessFailedException;

@@ -6,4 +6,4 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
  * Initial release.
 
-[Unreleased]: https://github.com/contao/monorepo/commits
+[Unreleased]: https://github.com/contao/monorepo-tools/commits
