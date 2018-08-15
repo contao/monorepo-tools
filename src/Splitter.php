@@ -68,12 +68,11 @@ class Splitter
             );
         }
 
-        (new Filesystem())->remove($this->cacheDir.'/repo');
-        (new Filesystem())->mkdir($this->cacheDir.'/repo');
+        (new Filesystem())->remove($this->cacheDir.'/repo.git');
 
         $this->output->writeln("\nLoad monorepo...");
 
-        $this->repository = new Repository($this->cacheDir.'/repo', $this->output);
+        $this->repository = new Repository($this->cacheDir.'/repo.git', $this->output);
         $this->repository
             ->init()
             ->addRemote('mono', $this->monorepoUrl)
