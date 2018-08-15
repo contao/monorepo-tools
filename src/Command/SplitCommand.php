@@ -17,6 +17,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class SplitCommand extends Command
 {
+    private $rootDir;
+
+    public function __construct(string $rootDir)
+    {
+        $this->rootDir = $rootDir;
+
+        parent::__construct();
+    }
+
     protected function configure(): void
     {
         $this
@@ -141,7 +150,7 @@ class SplitCommand extends Command
                 'tests' => 'x',
             ],
             */
-            \dirname(\dirname(__DIR__)).'/split-cache',
+            $this->rootDir.'/.monorepo-split-cache',
             $input->getOption('force-push'),
             $output
         );

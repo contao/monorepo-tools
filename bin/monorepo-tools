@@ -17,7 +17,7 @@ use Contao\MonorepoTools\Command\MergeCommand;
 
 $application = new Application();
 
-$application->add(new SplitCommand());
-$application->add(new MergeCommand());
+$application->add(new SplitCommand(dirname($composerDir)));
+$application->add(new MergeCommand(dirname($composerDir)));
 
 $application->run();

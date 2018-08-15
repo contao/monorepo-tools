@@ -17,6 +17,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class MergeCommand extends Command
 {
+    private $rootDir;
+
+    public function __construct(string $rootDir)
+    {
+        $this->rootDir = $rootDir;
+
+        parent::__construct();
+    }
+
     protected function configure(): void
     {
         $this
@@ -48,7 +57,7 @@ class MergeCommand extends Command
             ],
             [
             ],
-            \dirname(__DIR__, 2).'/merge-cache',
+            $this->rootDir.'/.monorepo-merge-cache',
             $output
         );
 
