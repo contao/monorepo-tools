@@ -75,6 +75,7 @@ class Splitter
         $this->repository = new Repository($this->cacheDir.'/repo.git', $this->output);
         $this->repository
             ->init()
+            ->setConfig('gc.auto', '0')
             ->addRemote('mono', $this->monorepoUrl)
             ->fetch('mono')
             ->fetchTags('mono', 'remote/mono/')
