@@ -1,7 +1,15 @@
 #!/usr/bin/env php
 <?php
 
-require __DIR__.'/vendor/autoload.php';
+if (file_exists(__DIR__.'/../vendor/autoload.php')) {
+    $composerDir = dirname(__DIR__).'/vendor';
+} else if (file_exists(__DIR__.'/../autoload.php')) {
+    $composerDir = dirname(__DIR__);
+} else {
+    $composerDir = dirname(__DIR__, 3);
+}
+
+require $composerDir.'/autoload.php';
 
 use Symfony\Component\Console\Application;
 use Contao\MonorepoTools\Command\SplitCommand;

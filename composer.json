@@ -9,6 +9,9 @@
             "homepage": "https://au.si/"
         }
     ],
+    "bin": [
+        "bin/monorepo-tools"
+    ],
     "require": {
         "php": "^7.1",
         "ext-zlib": "*",
