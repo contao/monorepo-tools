@@ -47,27 +47,28 @@ class Repository
         return $this;
     }
 
-    public function removeRefs(): self
+    public function removeBranches(): self
     {
-        foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' remote') as $remote) {
-            if ($remote === '') {
-                continue;
-            }
-            $this->execute('git --git-dir='.escapeshellarg($this->path).' remote remove '.escapeshellarg(trim($remote)));
-        }
+        (new Filesystem())->remove($this->path.'/refs/heads');
 
-        (new Filesystem())->remove([
-            $this->path.'/refs/heads',
-            $this->path.'/refs/remotes',
-            $this->path.'/refs/tags',
-        ]);
+        return $this;
+    }
+
+    public function removeTags(): self
+    {
+        (new Filesystem())->remove($this->path.'/refs/tags');
 
         return $this;
     }
 
     public function addRemote(string $name, string $url): self
     {
-        $this->execute('git --git-dir='.escapeshellarg($this->path).' remote add '.escapeshellarg($name).' '.escapeshellarg($url));
+        if (\in_array($name, $this->run('git --git-dir='.escapeshellarg($this->path).' remote'), true)) {
+            $this->execute('git --git-dir='.escapeshellarg($this->path).' remote set-url '.escapeshellarg($name).' '.escapeshellarg($url));
+        }
+        else {
+            $this->execute('git --git-dir='.escapeshellarg($this->path).' remote add '.escapeshellarg($name).' '.escapeshellarg($url));
+        }
 
         return $this;
     }

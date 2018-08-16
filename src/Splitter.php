@@ -78,7 +78,10 @@ class Splitter
         $this->repository = new Repository($this->cacheDir.'/repo.git', $this->output);
 
         if (is_dir($this->cacheDir.'/repo.git')) {
-            $this->repository->removeRefs();
+            $this->repository
+                ->removeBranches()
+                ->removeTags()
+            ;
         }
         else {
             $this->repository->init();
