@@ -303,9 +303,7 @@ class Repository
         $process = new Process($command);
         $process->setTimeout(600);
         $process->start();
-        foreach ($process->getIterator() as $data) {
-            $this->output->write($data);
-        }
+        $this->output->write($process->getIterator());
         $process->wait();
 
         if ($exitOnFailure && !$process->isSuccessful()) {
@@ -326,9 +324,7 @@ class Repository
         }
 
         foreach ($processes as $process) {
-            foreach ($process->getIterator() as $data) {
-                $this->output->write($data);
-            }
+            $this->output->write($process->getIterator());
             $process->wait();
         }
 
