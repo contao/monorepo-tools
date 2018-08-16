@@ -38,7 +38,7 @@ class SplitCommand extends Command
             ->addArgument(
                 'branch',
                 InputArgument::OPTIONAL,
-                'Which branch should be split, defaults to all branches.'
+                'Which branch should be split, defaults to all branches that match the configured branch filter.'
             )
             ->addOption(
                 'force-push',
@@ -58,6 +58,7 @@ class SplitCommand extends Command
 
         $splitter = new Splitter(
             $config['monorepo_url'],
+            $config['branch_filter'],
             $config['repositories'],
             $this->rootDir.'/.monorepo-split-cache',
             $input->getOption('force-push'),

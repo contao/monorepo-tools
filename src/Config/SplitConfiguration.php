@@ -23,6 +23,15 @@ class SplitConfiguration implements ConfigurationInterface
         $rootNode
             ->children()
                 ->scalarNode('monorepo_url')->isRequired()->end()
+                ->scalarNode('branch_filter')
+                    ->isRequired()
+                    ->validate()
+                        ->ifTrue(function ($value) {
+                            return @preg_match($value, '') === false;
+                        })
+                        ->thenInvalid('Filter must be a valid RegEx %s given.')
+                    ->end()
+                ->end()
                 ->arrayNode('repositories')
                     ->isRequired()
                     ->useAttributeAsKey('folder')

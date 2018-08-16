@@ -20,6 +20,7 @@ use Symfony\Component\Filesystem\Filesystem;
 class Splitter
 {
     private $monorepoUrl;
+    private $branchFilter;
     private $repoUrlsByFolder;
     private $cacheDir;
     private $forcePush;
@@ -46,9 +47,10 @@ class Splitter
      */
     private $treeCache = [];
 
-    public function __construct(string $monorepoUrl, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, ?string $branch, OutputInterface $output)
+    public function __construct(string $monorepoUrl, string $branchFilter, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, ?string $branch, OutputInterface $output)
     {
         $this->monorepoUrl = $monorepoUrl;
+        $this->branchFilter = $branchFilter;
         $this->repoUrlsByFolder = $repoUrlsByFolder;
         $this->cacheDir = $cacheDir;
         $this->objectsCachePath = $cacheDir.'/objects-v1.cache';
@@ -127,6 +129,19 @@ class Splitter
                 $this->branch => $branchCommits[$this->branch],
             ];
 
+        }
+        else {
+            foreach ($branchCommits as $branch => $commitHash) {
+                if (!preg_match($this->branchFilter, $branch)) {
+                    unset($branchCommits[$branch]);
+                }
+            }
+            if (!\count($branchCommits)) {
+                throw new \RuntimeException(sprintf(
+                    'No branch matching the filter %s found.',
+                    $this->branchFilter
+                ));
+            }
         }
 
         $this->output->writeln("\nRead commits...");
