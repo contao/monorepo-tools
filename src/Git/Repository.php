@@ -87,6 +87,15 @@ class Repository
         return $this;
     }
 
+    public function fetchConcurrent(array $remotes): self
+    {
+        $this->executeConcurrent(array_map(function($remote) {
+            return 'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote);
+        }, $remotes));
+
+        return $this;
+    }
+
     public function fetchTags(string $remote, string $prefix)
     {
         $this->execute(
@@ -237,7 +246,7 @@ class Repository
         return $this;
     }
 
-    private function run($command, $exitOnFailure = true)
+    private function run($command, $exitOnFailure = true): array
     {
         // Move the cursor to the beginning of the line
         $this->output->write("\x0D");
@@ -257,7 +266,7 @@ class Repository
         return explode("\n", $process->getOutput());
     }
 
-    private function execute($command, $exitOnFailure = true)
+    private function execute($command, $exitOnFailure = true): void
     {
         $this->output->writeln('   $ '.$command);
 
@@ -271,6 +280,34 @@ class Repository
 
         if ($exitOnFailure && !$process->isSuccessful()) {
             throw new ProcessFailedException($process);
+        }
+    }
+
+    private function executeConcurrent($commands, $exitOnFailure = true): void
+    {
+        $processes = [];
+
+        foreach ($commands as $command) {
+            $this->output->writeln('   $ '.$command);
+            $process = new Process($command);
+            $processes[] = $process;
+            $process->setTimeout(600);
+            $process->start();
+        }
+
+        foreach ($processes as $process) {
+            foreach ($process->getIterator() as $data) {
+                $this->output->write($data);
+            }
+            $process->wait();
+        }
+
+        if ($exitOnFailure) {
+            foreach ($processes as $process) {
+                if (!$process->isSuccessful()) {
+                    throw new ProcessFailedException($process);
+                }
+            }
         }
     }
 }

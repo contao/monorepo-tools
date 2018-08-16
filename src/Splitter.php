@@ -97,8 +97,12 @@ class Splitter
         foreach ($this->repoUrlsByFolder as $subFolder => $config) {
             $this->repository
                 ->addRemote($subFolder, $config['url'])
-                ->fetch($subFolder)
             ;
+        }
+
+        $this->repository->fetchConcurrent(array_keys($this->repoUrlsByFolder));
+
+        foreach ($this->repoUrlsByFolder as $subFolder => $config) {
             foreach ($config['mapping'] as $monoHash => $splitHash) {
                 $monoTreeHash = $this->getTreeObject(
                     $this->getCommitObject($monoHash)->getTreeHash()
