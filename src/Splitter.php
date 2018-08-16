@@ -194,7 +194,7 @@ class Splitter
         $this->output->writeln("\nPush to remotes...");
 
         $this->repository->pushBranches($pushBranches, $this->forcePush);
-        $this->repository->pushTags($pushTags, $this->forcePush);
+        $this->repository->pushTags($pushTags);
 
         $this->output->writeln("\nDone 🎉");
     }

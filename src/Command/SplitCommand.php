@@ -44,7 +44,7 @@ class SplitCommand extends Command
                 'force-push',
                 null,
                 null,
-                'Force push branches and tags to splitted remotes. Dangerous!'
+                'Force push branches (not tags) to splitted remotes. Dangerous!'
             )
         ;
     }
