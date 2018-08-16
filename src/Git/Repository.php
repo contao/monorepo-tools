@@ -212,9 +212,27 @@ class Repository
         return $this;
     }
 
+    public function pushBranches(array $branches, bool $force = false): self
+    {
+        $this->pushRefspecs(array_map(function($pushBranch) {
+            return ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]];
+        }, $branches), $force);
+
+        return $this;
+    }
+
     public function pushTag(string $localTag, string $remote, string $remoteTag, bool $force = false): self
     {
         $this->pushRefspec('refs/tags/'.$localTag.':refs/tags/'.$remoteTag, $remote, $force);
+
+        return $this;
+    }
+
+    public function pushTags(array $tags, bool $force = false): self
+    {
+        $this->pushRefspecs(array_map(function($pushTag) {
+            return ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]];
+        }, $tags), $force);
 
         return $this;
     }
@@ -230,6 +248,18 @@ class Repository
         $command .= ' '.escapeshellarg($remote).' '.escapeshellarg($refspec);
 
         $this->execute($command);
+    }
+
+    private function pushRefspecs(array $refspecsRemote, bool $force): void
+    {
+        $this->executeConcurrent(array_map(function($refspecRemote) use($force) {
+            $command = 'git --git-dir='.escapeshellarg($this->path).' push';
+            if ($force) {
+                $command .= ' --force';
+            }
+            $command .= ' '.escapeshellarg($refspecRemote[1]).' '.escapeshellarg($refspecRemote[0]);
+            return $command;
+        }, $refspecsRemote));
     }
 
     public function addObject(GitObject $object): self

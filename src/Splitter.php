@@ -166,23 +166,24 @@ class Splitter
         }
 
         $this->output->writeln("\nCreate branches...");
-        $addedBranches = [];
+        $pushBranches = [];
         foreach ($branchCommits as $branch => $commit) {
             foreach ($this->repoUrlsByFolder as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$commit])) {
                     $this->repository->addBranch($subRepo.'/'.$branch, $hashMapping[$subRepo][$commit]);
-                    $addedBranches[$subRepo][] = $branch;
+                    $pushBranches[] = [$subRepo.'/'.$branch, $subRepo, $branch];
                 }
             }
         }
 
         $this->output->writeln("\nCreate tags...");
-        $addedTags = [];
+        $pushTags = [];
         foreach ($this->repository->getTags('remote/mono/') as $tag => $commit) {
             foreach ($this->repoUrlsByFolder as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$commit])) {
                     $this->repository->addTag('remote/'.$subRepo.'/'.$tag, $hashMapping[$subRepo][$commit]);
                     $addedTags[$subRepo][] = $tag;
+                    $pushTags[] = ['remote/'.$subRepo.'/'.$tag, $subRepo, $tag];
                 }
             }
         }
@@ -192,17 +193,8 @@ class Splitter
 
         $this->output->writeln("\nPush to remotes...");
 
-        foreach ($addedBranches as $subRepo => $branches) {
-            foreach ($branches as $branch) {
-                $this->repository->pushBranch($subRepo.'/'.$branch, $subRepo, $branch, $this->forcePush);
-            }
-        }
-
-        foreach ($addedTags as $subRepo => $tags) {
-            foreach ($tags as $tag) {
-                $this->repository->pushTag('remote/'.$subRepo.'/'.$tag, $subRepo, $tag, $this->forcePush);
-            }
-        }
+        $this->repository->pushBranches($pushBranches, $this->forcePush);
+        $this->repository->pushTags($pushTags, $this->forcePush);
 
         $this->output->writeln("\nDone 🎉");
     }
