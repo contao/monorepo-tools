@@ -271,7 +271,9 @@ class Repository
             throw new \RuntimeException(sprintf('Unable to create directory %s', \dirname($path)));
         }
 
-        file_put_contents($path, $object->getGitObjectBytes());
+        if (!file_exists($path)) {
+            file_put_contents($path, $object->getGitObjectBytes());
+        }
 
         return $this;
     }
