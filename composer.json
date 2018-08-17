@@ -15,10 +15,10 @@
     "require": {
         "php": "^7.1",
         "ext-zlib": "*",
-        "symfony/config": "^4.1",
-        "symfony/console": "^4.1",
-        "symfony/filesystem": "^4.1",
-        "symfony/process": "^4.1"
+        "symfony/config": "^3.4 || ^4.0",
+        "symfony/console": "^3.4 || ^4.0",
+        "symfony/filesystem": "^3.4 || ^4.0",
+        "symfony/process": "^3.4 || ^4.0"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.12",
