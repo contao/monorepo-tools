@@ -131,6 +131,11 @@ class Splitter
                 ));
             }
 
+            if (!preg_match($this->branchFilter, $this->branch)) {
+                $this->output->writeln("\nBranch {$this->branch} does not match the branch filter {$this->branchFilter}.");
+                return;
+            }
+
             // Only use the specified branch
             $branchCommits = [
                 $this->branch => $branchCommits[$this->branch],
