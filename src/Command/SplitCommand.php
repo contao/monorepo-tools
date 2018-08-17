@@ -63,8 +63,12 @@ class SplitCommand extends Command
             [Yaml::parse(file_get_contents($this->rootDir.'/monorepo-split.yml'))]
         );
 
+        foreach ($config['repositories'] as $folder => $settings) {
+            $config['repositories'][$folder]['url'] = $this->addAuthToken($settings['url']);
+        }
+
         $splitter = new Splitter(
-            $config['monorepo_url'],
+            $this->addAuthToken($config['monorepo_url']),
             $config['branch_filter'],
             $config['repositories'],
             $input->getOption('cache-dir') ?: $this->rootDir.'/.monorepo-split-cache',
@@ -74,5 +78,17 @@ class SplitCommand extends Command
         );
 
         $splitter->split();
+    }
+
+    private function addAuthToken($repoUrl): string
+    {
+        if (
+            ($token = getenv('GITHUB_TOKEN'))
+            && strncmp($repoUrl, 'https://github.com/', 19) === 0
+        ) {
+            return 'https://'.$token.'@github.com/'.substr($repoUrl, 19);
+        }
+
+        return $repoUrl;
     }
 }
