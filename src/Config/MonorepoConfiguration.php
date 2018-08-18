@@ -13,12 +13,12 @@ namespace Contao\MonorepoTools\Config;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
-class SplitConfiguration implements ConfigurationInterface
+class MonorepoConfiguration implements ConfigurationInterface
 {
     public function getConfigTreeBuilder()
     {
         $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('split');
+        $rootNode = $treeBuilder->root('monorepo');
 
         $rootNode
             ->children()
@@ -44,6 +44,21 @@ class SplitConfiguration implements ConfigurationInterface
                                 ->normalizeKeys(false)
                                 ->scalarPrototype()->end()
                             ->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('composer')
+                    ->normalizeKeys(false)
+                    ->children()
+                        ->arrayNode('require')
+                            ->useAttributeAsKey('package')
+                            ->normalizeKeys(false)
+                            ->scalarPrototype()->end()
+                        ->end()
+                        ->arrayNode('require-dev')
+                            ->useAttributeAsKey('package')
+                            ->normalizeKeys(false)
+                            ->scalarPrototype()->end()
                         ->end()
                     ->end()
                 ->end()

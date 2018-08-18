@@ -10,7 +10,7 @@
 
 namespace Contao\MonorepoTools\Command;
 
-use Contao\MonorepoTools\Config\SplitConfiguration;
+use Contao\MonorepoTools\Config\MonorepoConfiguration;
 use Contao\MonorepoTools\Splitter;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Console\Command\Command;
@@ -59,8 +59,12 @@ class SplitCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): void
     {
         $config = (new Processor())->processConfiguration(
-            new SplitConfiguration(),
-            [Yaml::parse(file_get_contents($this->rootDir.'/monorepo-split.yml'))]
+            new MonorepoConfiguration(),
+            [Yaml::parse(file_get_contents(
+                file_exists($this->rootDir.'/monorepo-split.yml')
+                    ? $this->rootDir.'/monorepo-split.yml'
+                    : $this->rootDir.'/monorepo.yml'
+            ))]
         );
 
         foreach ($config['repositories'] as $folder => $settings) {
