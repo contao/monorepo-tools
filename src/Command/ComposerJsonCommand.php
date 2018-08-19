@@ -199,11 +199,11 @@ class ComposerJsonCommand extends Command
 
         $rootJson['autoload'] = $this->combineAutoload(array_map(function($json) {
             return $json['autoload'] ?? [];
-        }, $jsons));
+        }, $jsons), $rootJson['autoload'] ?? null);
 
         $rootJson['autoload-dev'] = $this->combineAutoload(array_map(function($json) {
             return $json['autoload-dev'] ?? [];
-        }, $jsons));
+        }, $jsons), $rootJson['autoload-dev'] ?? null);
 
         return json_encode($rootJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
     }
@@ -310,14 +310,20 @@ class ComposerJsonCommand extends Command
         }, $jsons));
     }
 
-    private function combineAutoload(array $autoloadConfigs): array
+    private function combineAutoload(array $autoloadConfigs, array $currentAutoload = null): array
     {
-        $returnAutoload = [
-            'psr-4' => [],
-            'classmap' => [],
-            'exclude-from-classmap' => [],
-            'files' => [],
-        ];
+        $returnAutoload = \is_array($currentAutoload)
+            ? array_combine(
+                array_keys($currentAutoload),
+                array_fill(0, \count($currentAutoload), [])
+            )
+            : [
+                'psr-4' => [],
+                'classmap' => [],
+                'exclude-from-classmap' => [],
+                'files' => [],
+            ]
+        ;
 
         foreach ($autoloadConfigs as $folder => $autoload) {
             if (isset($autoload['psr-4'])) {
@@ -342,10 +348,14 @@ class ComposerJsonCommand extends Command
             }
         }
 
-        ksort($returnAutoload['psr-4']);
-        sort($returnAutoload['classmap']);
-        sort($returnAutoload['exclude-from-classmap']);
-        sort($returnAutoload['files']);
+        foreach($returnAutoload as &$autoloadArray) {
+            if (array_keys($autoloadArray) === range(0, \count($autoloadArray) - 1)) {
+                sort($autoloadArray);
+            }
+            else {
+                ksort($autoloadArray);
+            }
+        }
 
         return array_filter($returnAutoload);
     }
