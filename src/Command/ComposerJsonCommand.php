@@ -36,12 +36,12 @@ class ComposerJsonCommand extends Command
     {
         $this
             ->setName('composer-json')
-            ->setDescription('Merge all composer.json files into the root composer.json.')
+            ->setDescription('Merge all composer.json files into the root composer.json and update the branch-alias.')
             ->addOption(
                 'validate',
                 null,
                 null,
-                'Validate if the composer.json is already up to date.'
+                'Validate if the composer.json files are already up to date.'
             )
         ;
     }
@@ -57,20 +57,74 @@ class ComposerJsonCommand extends Command
             ))]
         );
 
-        $json = $this->getCombinedJson();
+        $rootJson = $this->getCombinedJson();
+        $splitJsons = $this->updateBranchAlias();
 
         if ($input->getOption('validate')) {
-            if (json_decode(file_get_contents($this->rootDir.'/composer.json')) == json_decode($json)) {
-                $output->writeln('VALID');
-            }
-            else {
-                throw new RuntimeException('composer.json is not up to date.');
+            $jsonPaths = $this->validateJsons($rootJson, $splitJsons);
+            foreach($jsonPaths as $path) {
+                $output->writeln('Validated '.$path);
             }
         }
         else {
-            file_put_contents($this->rootDir.'/composer.json', $json."\n");
-            $output->writeln('Updated '.$this->rootDir.'/composer.json');
+            $jsonPaths = $this->updateJsons($rootJson, $splitJsons);
+            foreach($jsonPaths as $path) {
+                $output->writeln('Updated '.$path);
+            }
         }
+    }
+
+    public function validateJsons(string $rootJson, array $splitJsons): array
+    {
+        $jsonsByPath = array_combine(
+            array_map(function($folder) {
+                return $this->rootDir.'/'.$folder.'/composer.json';
+            }, array_keys($splitJsons)),
+            array_values($splitJsons)
+        );
+        $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
+
+        $valid = [];
+        $invalid = [];
+
+        foreach ($jsonsByPath as $path => $json) {
+            if (json_decode(file_get_contents($path)) == json_decode($json)) {
+                $valid[] = $path;
+            }
+            else {
+                $invalid[] = $path;
+            }
+        }
+
+        if (\count($invalid)) {
+            throw new RuntimeException(sprintf(
+                "composer.json not up to date:\n%s",
+                implode("\n", $invalid)
+            ));
+        }
+
+        return $valid;
+    }
+
+    private function updateJsons(string $rootJson, array $splitJsons): array
+    {
+        $jsonsByPath = array_combine(
+            array_map(function($folder) {
+                return $this->rootDir.'/'.$folder.'/composer.json';
+            }, array_keys($splitJsons)),
+            array_values($splitJsons)
+        );
+        $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
+
+        foreach ($jsonsByPath as $path => $json) {
+            if (!file_put_contents($path, $json)) {
+                throw new RuntimeException(
+                    sprintf('Unable to write to %s', $path)
+                );
+            }
+        }
+
+        return array_keys($jsonsByPath);
     }
 
     private function getCombinedJson(): string
@@ -151,7 +205,7 @@ class ComposerJsonCommand extends Command
             return $json['autoload-dev'] ?? [];
         }, $jsons));
 
-        return json_encode($rootJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return json_encode($rootJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
     }
 
     private function combineDependecies(array $requireArrays, array $ignorePackages = []): array
@@ -294,5 +348,37 @@ class ComposerJsonCommand extends Command
         sort($returnAutoload['files']);
 
         return array_filter($returnAutoload);
+    }
+
+    private function updateBranchAlias(): array
+    {
+        $rootJson = json_decode(file_get_contents($this->rootDir.'/composer.json'), true);
+
+        $jsons = array_map(function($folder) {
+            $path = $this->rootDir.'/'.$folder.'/composer.json';
+            if (!file_exists($path)) {
+                throw new \InvalidArgumentException(
+                    sprintf('File %s doesn’t exist.', $path)
+                );
+            }
+            return json_decode(file_get_contents($path), true);
+        }, array_combine(
+            array_keys($this->config['repositories']),
+            array_keys($this->config['repositories'])
+        ));
+
+        $jsons = array_map(function($json) use($rootJson) {
+            if (isset($rootJson['extra']['branch-alias'])) {
+                $json['extra']['branch-alias'] = $rootJson['extra']['branch-alias'];
+            }
+            elseif (isset($json['extra']['branch-alias'])) {
+                unset($json['extra']['branch-alias']);
+            }
+            return $json;
+        }, $jsons);
+
+        return array_map(function($json) {
+            return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
+        }, $jsons);
     }
 }
