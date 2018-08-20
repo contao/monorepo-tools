@@ -220,13 +220,16 @@ class ComposerJsonCommand extends Command
             }
         }
 
-        // Unset replaced packages (e.g. symfony/http-cache is replaced by symfony/symfony)
+        // Combine replaced packages (e.g. symfony/symfony)
         foreach ($requires as $packageName => $constraints) {
             if (!isset($this->replacedPackages[$packageName])) {
                 continue;
             }
-            foreach (array_keys($this->replacedPackages[$packageName]) as $replacedPackageName) {
-                unset($requires[$replacedPackageName]);
+            foreach ($this->replacedPackages[$packageName] as $replacedPackageName => $versionConstraint) {
+                if (isset($requires[$replacedPackageName])) {
+                    $requires[$packageName] = array_merge($requires[$packageName], $requires[$replacedPackageName]);
+                    unset($requires[$replacedPackageName]);
+                }
             }
         }
 
