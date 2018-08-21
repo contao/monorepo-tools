@@ -313,6 +313,11 @@ class ComposerJsonCommand extends Command
                         continue;
                     }
 
+                    if ($aPart === $bPart) {
+                        unset($aParts[$aKey]);
+                        continue 2;
+                    }
+
                     if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
                         if (Comparator::greaterThan(substr($aPart, 1), substr($bPart, 1))) {
                             unset($bParts[$bKey]);
@@ -343,7 +348,7 @@ class ComposerJsonCommand extends Command
 
             }
 
-            return trim(implode(' || ', $aParts).' '.implode(' || ', $bParts));
+            return trim(implode(' || ', $aParts).' || '.implode(' || ', $bParts), ' |');
         });
     }
 
