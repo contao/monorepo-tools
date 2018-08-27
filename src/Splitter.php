@@ -24,7 +24,7 @@ class Splitter
     private $repoUrlsByFolder;
     private $cacheDir;
     private $forcePush;
-    private $branch;
+    private $branchOrTag;
     private $objectsCachePath;
 
     /**
@@ -47,7 +47,7 @@ class Splitter
      */
     private $treeCache = [];
 
-    public function __construct(string $monorepoUrl, string $branchFilter, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, ?string $branch, OutputInterface $output)
+    public function __construct(string $monorepoUrl, string $branchFilter, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, ?string $branchOrTag, OutputInterface $output)
     {
         $this->monorepoUrl = $monorepoUrl;
         $this->branchFilter = $branchFilter;
@@ -55,7 +55,7 @@ class Splitter
         $this->cacheDir = $cacheDir;
         $this->objectsCachePath = $cacheDir.'/objects-v1.cache';
         $this->forcePush = $forcePush;
-        $this->branch = $branch;
+        $this->branchOrTag = $branchOrTag;
         $this->output = $output;
 
         if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
@@ -91,7 +91,6 @@ class Splitter
             ->setConfig('gc.auto', '0')
             ->addRemote('mono', $this->monorepoUrl)
             ->fetch('mono')
-            ->fetchTags('mono', 'remote/mono/')
         ;
 
         foreach ($this->repoUrlsByFolder as $subFolder => $config) {
@@ -120,26 +119,40 @@ class Splitter
         }
 
         $branchCommits = $this->repository->getRemoteBranches('mono');
+        $tagCommits = [];
 
-        if ($this->branch !== null) {
+        if ($this->branchOrTag !== null) {
 
-            if (!isset($branchCommits[$this->branch])) {
-                throw new InvalidArgumentException(sprintf(
-                    'Branch %s does not exist, use one of %s',
-                    $this->branch,
-                    implode(', ', array_keys($branchCommits))
-                ));
+            if (isset($branchCommits[$this->branchOrTag])) {
+                if (!preg_match($this->branchFilter, $this->branchOrTag)) {
+                    $this->output->writeln("\nBranch {$this->branchOrTag} does not match the branch filter {$this->branchFilter}.");
+                    return;
+                }
+
+                // Only use the specified branch
+                $branchCommits = [
+                    $this->branchOrTag => $branchCommits[$this->branchOrTag],
+                ];
             }
-
-            if (!preg_match($this->branchFilter, $this->branch)) {
-                $this->output->writeln("\nBranch {$this->branch} does not match the branch filter {$this->branchFilter}.");
-                return;
+            else {
+                try {
+                    $tagHash = $this->repository
+                        ->fetchTag($this->branchOrTag, 'mono', 'remote/mono/')
+                        ->getTag('remote/mono/'.$this->branchOrTag)
+                    ;
+                }
+                catch (\Exception $e) {
+                    throw new InvalidArgumentException(sprintf(
+                        'Branch or tag %s does not exist, use one of %s',
+                        $this->branchOrTag,
+                        implode(', ', array_keys($branchCommits))
+                    ));
+                }
+                $tagCommits = [
+                    $this->branchOrTag => $tagHash,
+                ];
+                $branchCommits = [];
             }
-
-            // Only use the specified branch
-            $branchCommits = [
-                $this->branch => $branchCommits[$this->branch],
-            ];
 
         }
         else {
@@ -157,10 +170,13 @@ class Splitter
         }
 
         $this->output->writeln("\nRead commits...");
-        $commitObjects = $this->readCommits(array_values($branchCommits));
+        $commitObjects = $this->readCommits(array_merge(
+            array_values($branchCommits),
+            array_values($tagCommits)
+        ));
 
         if (empty($commitObjects)) {
-            throw new \RuntimeException(sprintf('No commits found for: %s', print_r($branchCommits, true)));
+            throw new \RuntimeException(sprintf('No commits found for: %s %s', print_r($branchCommits, true), print_r($tagCommits, true)));
         }
 
         $this->output->writeln("\nSplit commits...");
@@ -170,25 +186,29 @@ class Splitter
             throw new \RuntimeException(sprintf('No hash mapping for commits: %s', print_r($commitObjects, true)));
         }
 
-        $this->output->writeln("\nCreate branches...");
         $pushBranches = [];
-        foreach ($branchCommits as $branch => $commit) {
-            foreach ($this->repoUrlsByFolder as $subRepo => $config) {
-                if (isset($hashMapping[$subRepo][$commit])) {
-                    $this->repository->addBranch($subRepo.'/'.$branch, $hashMapping[$subRepo][$commit]);
-                    $pushBranches[] = [$subRepo.'/'.$branch, $subRepo, $branch];
+        $pushTags = [];
+
+        if (\count($branchCommits)) {
+            $this->output->writeln("\nCreate branches...");
+            foreach ($branchCommits as $branch => $commit) {
+                foreach ($this->repoUrlsByFolder as $subRepo => $config) {
+                    if (isset($hashMapping[$subRepo][$commit])) {
+                        $this->repository->addBranch($subRepo.'/'.$branch, $hashMapping[$subRepo][$commit]);
+                        $pushBranches[] = [$subRepo.'/'.$branch, $subRepo, $branch];
+                    }
                 }
             }
         }
 
-        $this->output->writeln("\nCreate tags...");
-        $pushTags = [];
-        foreach ($this->repository->getTags('remote/mono/') as $tag => $commit) {
-            foreach ($this->repoUrlsByFolder as $subRepo => $config) {
-                if (isset($hashMapping[$subRepo][$commit])) {
-                    $this->repository->addTag('remote/'.$subRepo.'/'.$tag, $hashMapping[$subRepo][$commit]);
-                    $addedTags[$subRepo][] = $tag;
-                    $pushTags[] = ['remote/'.$subRepo.'/'.$tag, $subRepo, $tag];
+        if (\count($tagCommits)) {
+            $this->output->writeln("\nCreate tags...");
+            foreach ($tagCommits as $tag => $commit) {
+                foreach ($this->repoUrlsByFolder as $subRepo => $config) {
+                    if (isset($hashMapping[$subRepo][$commit])) {
+                        $this->repository->addTag('remote/'.$subRepo.'/'.$tag, $hashMapping[$subRepo][$commit]);
+                        $pushTags[] = ['remote/'.$subRepo.'/'.$tag, $subRepo, $tag];
+                    }
                 }
             }
         }
