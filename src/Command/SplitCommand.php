@@ -37,9 +37,9 @@ class SplitCommand extends Command
             ->setName('split')
             ->setDescription('Split monorepo into repositories by subfolder.')
             ->addArgument(
-                'branch',
+                'branch-or-tag',
                 InputArgument::OPTIONAL,
-                'Which branch should be split, defaults to all branches that match the configured branch filter.'
+                'Which branch or tag should be split, defaults to all branches that match the configured branch filter.'
             )
             ->addOption(
                 'cache-dir',
@@ -77,7 +77,7 @@ class SplitCommand extends Command
             $config['repositories'],
             $input->getOption('cache-dir') ?: $this->rootDir.'/.monorepo-split-cache',
             $input->getOption('force-push'),
-            $input->getArgument('branch'),
+            $input->getArgument('branch-or-tag'),
             $output
         );
 

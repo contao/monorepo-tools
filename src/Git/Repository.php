@@ -96,11 +96,21 @@ class Repository
         return $this;
     }
 
-    public function fetchTags(string $remote, string $prefix)
+    public function fetchTags(string $remote, string $prefix): self
     {
         $this->execute(
             'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote).' '
             .escapeshellarg('+refs/tags/*:refs/tags/'.$prefix.'*')
+        );
+
+        return $this;
+    }
+
+    public function fetchTag(string $tag, string $remote, string $prefix): self
+    {
+        $this->execute(
+            'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote).' '
+            .escapeshellarg('+refs/tags/'.$tag.':refs/tags/'.$prefix.$tag)
         );
 
         return $this;
@@ -139,6 +149,17 @@ class Repository
         }
 
         return $tags;
+    }
+
+    public function getTag(string $tag): string
+    {
+        $result = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-list -n 1 '.escapeshellarg($tag));
+
+        if (!\count($result) || \strlen($result[0]) !== 40) {
+            throw new \RuntimeException(sprintf('Tag %s not found.', $tag));
+        }
+
+        return $result[0];
     }
 
     public function addTag(string $name, string $hash): self
