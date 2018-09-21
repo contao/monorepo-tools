@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -12,8 +14,14 @@ namespace Contao\MonorepoTools\Git;
 
 class Commit extends GitObject
 {
+    /**
+     * @var string
+     */
     private $tree;
 
+    /**
+     * @var array
+     */
     private $parents = [];
 
     public function __construct(string $rawCommit)
@@ -21,13 +29,13 @@ class Commit extends GitObject
         parent::__construct($rawCommit);
 
         foreach (explode("\n", $this->getRaw()) as $line) {
-            if ($line === '') {
+            if ('' === $line) {
                 break;
             }
-            if (strncmp($line, 'tree ', 5) === 0) {
+
+            if (0 === strncmp($line, 'tree ', 5)) {
                 $this->tree = substr($line, 5, 40);
-            }
-            elseif (strncmp($line, 'parent ', 7) === 0) {
+            } elseif (0 === strncmp($line, 'parent ', 7)) {
                 $this->parents[] = substr($line, 7, 40);
             }
         }
@@ -38,6 +46,9 @@ class Commit extends GitObject
         return $this->tree;
     }
 
+    /**
+     * @return string[]
+     */
     public function getParentHashes(): array
     {
         return $this->parents;
@@ -46,11 +57,13 @@ class Commit extends GitObject
     public function getCommitterDate(): \DateTime
     {
         foreach (explode("\n", $this->getRaw()) as $line) {
-            if ($line === '') {
+            if ('' === $line) {
                 break;
             }
-            if (strncmp($line, 'committer ', 10) === 0) {
+
+            if (0 === strncmp($line, 'committer ', 10)) {
                 $parts = explode(' ', $line);
+
                 return \DateTime::createFromFormat(
                     'U',
                     $parts[\count($parts) - 2],
@@ -67,7 +80,7 @@ class Commit extends GitObject
         $raw = $this->getRaw();
         $messageOffset = strpos($raw, "\n\n");
 
-        if ($messageOffset === false) {
+        if (false === $messageOffset) {
             throw new \RuntimeException('Missing commit message.');
         }
 
@@ -77,11 +90,13 @@ class Commit extends GitObject
     public function hasGpgSignature(): bool
     {
         $raw = explode("\n", $this->getRaw());
+
         foreach ($raw as $num => $line) {
-            if ($line === '') {
+            if ('' === $line) {
                 break;
             }
-            if (strncmp($line, 'gpgsig ', 7) === 0) {
+
+            if (0 === strncmp($line, 'gpgsig ', 7)) {
                 return true;
             }
         }
@@ -94,26 +109,24 @@ class Commit extends GitObject
         $raw = $this->withoutGpgSignature()->getRaw();
         $messageOffset = strpos($raw, "\n\n");
 
-        if ($messageOffset === false) {
+        if (false === $messageOffset) {
             throw new \RuntimeException('Missing commit message.');
         }
 
-        return new self(
-            substr($raw, 0, $messageOffset)
-            ."\n\n"
-            .$message
-        );
+        return new self(substr($raw, 0, $messageOffset)."\n\n".$message);
     }
 
     public function withTree(string $hash): self
     {
         $raw = explode("\n", $this->withoutGpgSignature()->getRaw());
+
         foreach ($raw as $num => $line) {
-            if ($line === '') {
+            if ('' === $line) {
                 break;
             }
-            if (strncmp($line, 'tree ', 5) === 0) {
-                $raw[$num] = 'tree ' . $hash;
+
+            if (0 === strncmp($line, 'tree ', 5)) {
+                $raw[$num] = 'tree '.$hash;
                 break;
             }
         }
@@ -124,16 +137,17 @@ class Commit extends GitObject
     public function withParents(array $hashes): self
     {
         $raw = explode("\n", $this->withoutGpgSignature()->getRaw());
+
         foreach ($raw as $num => $line) {
-            if ($line === '') {
+            if ('' === $line) {
                 break;
             }
-            if (strncmp($line, 'tree ', 5) === 0) {
+
+            if (0 === strncmp($line, 'tree ', 5)) {
                 if (\count($hashes)) {
                     $raw[$num] .= "\nparent ".implode("\nparent ", $hashes);
                 }
-            }
-            elseif (strncmp($line, 'parent ', 7) === 0) {
+            } elseif (0 === strncmp($line, 'parent ', 7)) {
                 unset($raw[$num]);
             }
         }
@@ -149,16 +163,20 @@ class Commit extends GitObject
 
         $raw = explode("\n", $this->getRaw());
         $signatureStartFound = false;
+
         foreach ($raw as $num => $line) {
-            if ($line === '') {
+            if ('' === $line) {
                 break;
             }
-            if ($signatureStartFound && $line[0] === ' ') {
+
+            if ($signatureStartFound && ' ' === $line[0]) {
                 unset($raw[$num]);
                 continue;
             }
+
             $signatureStartFound = false;
-            if (strncmp($line, 'gpgsig ', 7) === 0) {
+
+            if (0 === strncmp($line, 'gpgsig ', 7)) {
                 $signatureStartFound = true;
                 unset($raw[$num]);
             }

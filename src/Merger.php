@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -15,12 +17,10 @@ use Contao\MonorepoTools\Git\Repository;
 use Contao\MonorepoTools\Git\Tree;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
 
 class Merger
 {
-    const VERSION_MAPPING = [
+    private const VERSION_MAPPING = [
         '0-RC5' => '0-RC4',
         '0-RC4' => '0-RC3',
         '0-RC3' => '0-RC2',
@@ -33,7 +33,9 @@ class Merger
         '0-beta1' => '0',
     ];
 
-    private $monorepoUrl;
+    /**
+     * @var array<string,string>
+     */
     private $repoUrlsByFolder;
 
     /**
@@ -45,6 +47,10 @@ class Merger
      * @var Repository
      */
     private $repository;
+
+    /**
+     * @var string
+     */
     private $cacheDir;
 
     /**
@@ -58,18 +64,12 @@ class Merger
     private $commitCache = [];
 
     /**
-     * @var array<string,Tree>
-     */
-    private $treeCache = [];
-
-    /**
      * @var array<string,array<string,string>>
      */
     private $exportMappingByFolder = [];
 
-    public function __construct(string $monorepoUrl, array $repoUrlsByFolder, array $ignoreCommits, string $cacheDir, OutputInterface $output)
+    public function __construct(array $repoUrlsByFolder, array $ignoreCommits, string $cacheDir, OutputInterface $output)
     {
-        $this->monorepoUrl = $monorepoUrl;
         $this->repoUrlsByFolder = $repoUrlsByFolder;
         $this->ignoreCommits = $ignoreCommits;
         $this->cacheDir = $cacheDir;
@@ -80,7 +80,7 @@ class Merger
         }
     }
 
-    public function merge()
+    public function merge(): void
     {
         (new Filesystem())->remove($this->cacheDir.'/repo');
         (new Filesystem())->mkdir($this->cacheDir.'/repo');
@@ -88,11 +88,9 @@ class Merger
         $this->output->writeln("\nLoad repositories...");
 
         $this->repository = new Repository($this->cacheDir.'/repo', $this->output);
-        $this->repository
-            ->init()
-        ;
+        $this->repository->init();
 
-        foreach($this->repoUrlsByFolder as $subFolder => $remote) {
+        foreach ($this->repoUrlsByFolder as $subFolder => $remote) {
             $this->repository
                 ->addRemote($subFolder, $remote)
                 ->fetch($subFolder)
@@ -102,17 +100,20 @@ class Merger
 
         $this->output->writeln("\nMerge repositories...");
         $mainCommits = [];
-        foreach($this->repoUrlsByFolder as $subFolder => $remote) {
+
+        foreach ($this->repoUrlsByFolder as $subFolder => $remote) {
             $mainCommits[$subFolder] = $this->mergeRepo($subFolder);
         }
 
         $this->output->writeln("\nCreate branches and tags...");
 
         $trees = [];
-        foreach($mainCommits as $subFolder => $commits) {
+
+        foreach ($mainCommits as $subFolder => $commits) {
             foreach ($commits['branches'] as $branch => $commit) {
                 $trees['branches'][$branch][$subFolder] = $this->getCommitObject($commit)->getTreeHash();
             }
+
             foreach ($commits['tags'] as $tag => $commit) {
                 $trees['tags'][$tag][$subFolder] = $this->getCommitObject($commit)->getTreeHash();
             }
@@ -125,7 +126,7 @@ class Merger
                     $this->combineTrees($treeByFolder),
                     'Merge the bundles into the '.$branch.' branch.',
                     array_filter(array_map(
-                        function($commits) use($branch) {
+                        function ($commits) use ($branch) {
                             return $commits['branches'][$branch] ?? null;
                         },
                         $mainCommits
@@ -141,22 +142,23 @@ class Merger
                     $this->combineTrees($treeByFolder),
                     'Version '.$tag.'.',
                     array_filter(array_map(
-                        function($commits, $subFolder) use($tag) {
+                        function ($commits, $subFolder) use ($tag) {
                             while (!isset($commits['tags'][$tag])) {
                                 $parts = explode('.', $tag);
+
                                 if (isset($parts[2]) && is_numeric($parts[2]) && (int) $parts[2] > 0) {
-                                    $parts[2]--;
+                                    --$parts[2];
                                     $tag = implode('.', $parts);
-                                }
-                                elseif (isset($parts[2]) && isset(self::VERSION_MAPPING[$parts[2]])) {
+                                } elseif (isset($parts[2], self::VERSION_MAPPING[$parts[2]])) {
                                     $parts[2] = self::VERSION_MAPPING[$parts[2]];
                                     $tag = implode('.', $parts);
-                                }
-                                else {
+                                } else {
                                     $this->output->writeln("\e[41m\n\n  Missing $tag in $subFolder\n\e[0m");
+
                                     return null;
                                 }
                             }
+
                             return $commits['tags'][$tag];
                         },
                         $mainCommits,
@@ -172,10 +174,12 @@ class Merger
         $this->output->writeln(var_export($this->exportMappingByFolder, true));
     }
 
-    private function mergeRepo($subFolder)
+    /**
+     * @return array<string,array<string,string>>
+     */
+    private function mergeRepo(string $subFolder): array
     {
         $branchCommits = $this->repository->getRemoteBranches($subFolder);
-
         $commits = $this->readCommits(array_values($branchCommits));
 
         if (empty($commits)) {
@@ -190,13 +194,16 @@ class Merger
 
         foreach ($this->repository->getTags('remote/'.$subFolder.'/') as $tag => $commitHash) {
             $newTag = $subFolder.'-'.$tag;
+
             if (!isset($hashMapping[$commitHash])) {
                 throw new \RuntimeException(sprintf('Missing Commit hash %s for tag %s. %s', $commitHash, $tag, print_r($hashMapping, true)));
             }
+
             $this->repository->addTag($newTag, $hashMapping[$commitHash]);
         }
 
         $return = [];
+
         foreach ($branchCommits as $branch => $commit) {
             $return['branches'][$branch] = $hashMapping[$commit];
             $this->exportMappingByFolder[$subFolder][$hashMapping[$commit]] = $commit;
@@ -206,6 +213,7 @@ class Merger
             if (!isset($hashMapping[$commitHash])) {
                 throw new \RuntimeException(sprintf('Missing Commit hash %s for tag %s. %s', $commitHash, $tag, print_r($hashMapping, true)));
             }
+
             $return['tags'][$tag] = $hashMapping[$commitHash];
             $this->repository->removeTag('remote/'.$subFolder.'/'.$tag);
         }
@@ -220,53 +228,63 @@ class Merger
      *
      * @return array<string,string>
      */
-    private function moveCommitsToSubfolder(array $commits, string $subFolder)
+    private function moveCommitsToSubfolder(array $commits, string $subFolder): array
     {
         $hashMapping = [];
         $pending = array_keys($commits);
-        while(count($pending)) {
+
+        while (\count($pending)) {
             $current = array_pop($pending);
+
             if (isset($hashMapping[$current])) {
                 continue;
             }
+
             $missingParents = [];
+
             foreach ($commits[$current]->getParentHashes() as $parent) {
                 if (!isset($hashMapping[$parent]) && !\in_array($parent, $this->ignoreCommits, true)) {
                     $missingParents[] = $parent;
                 }
             }
-            if (count($missingParents)) {
+
+            if (\count($missingParents)) {
                 $pending[] = $current;
+
                 foreach ($missingParents as $parent) {
                     $pending[] = $parent;
                 }
+
                 continue;
             }
+
             $hashMapping[$current] = $this->moveCommitToSubfolder($current, $commits[$current]->getTreeHash(), $hashMapping, $subFolder);
         }
+
         return $hashMapping;
     }
 
-    private function moveCommitToSubfolder($commit, $tree, &$hashMapping, string $subFolder)
+    private function moveCommitToSubfolder($commit, $tree, &$hashMapping, string $subFolder): string
     {
         $newTree = $this->createTree($subFolder, $tree);
+
         return $this->createNewCommit($commit, $newTree, $hashMapping, $subFolder);
     }
 
-    private function createTree(string $subFolder, string $subTree)
+    private function createTree(string $subFolder, string $subTree): string
     {
         // Check for empty sub tree
-        if ($subTree === '4b825dc642cb6eb9a060e54bf8d69288fbee4904') {
+        if ('4b825dc642cb6eb9a060e54bf8d69288fbee4904' === $subTree) {
             return $subTree;
         }
 
-        $tree = new Tree("40000 $subFolder\0" . hex2bin($subTree));
+        $tree = new Tree("40000 $subFolder\0".hex2bin($subTree));
         $this->repository->addObject($tree);
 
         return $tree->getHash();
     }
 
-    private function combineTrees(array $trees)
+    private function combineTrees(array $trees): string
     {
         ksort($trees);
 
@@ -284,12 +302,17 @@ class Merger
         $newCommit = $oldCommit
             ->withMessage('['.ucfirst(explode('-', $subFolder)[0]).'] '.$oldCommit->getMessage())
             ->withTree($treeHash)
-            ->withParents(array_filter(array_map(function($parentHash) use (&$hashMapping) {
-                return \in_array($parentHash, $this->ignoreCommits, true)
-                    ? null
-                    : $hashMapping[$parentHash]
-                ;
-            }, $oldCommit->getParentHashes())))
+            ->withParents(
+                array_filter(array_map(
+                    function ($parentHash) use (&$hashMapping) {
+                        return \in_array($parentHash, $this->ignoreCommits, true)
+                            ? null
+                            : $hashMapping[$parentHash]
+                        ;
+                    },
+                    $oldCommit->getParentHashes()
+                ))
+            )
         ;
 
         $this->repository->addObject($newCommit);
@@ -306,13 +329,16 @@ class Merger
         $commits = [];
         $pending = $baseCommits;
 
-        while(count($pending)) {
+        while (\count($pending)) {
             $current = array_shift($pending);
+
             if (isset($commits[$current])) {
                 continue;
             }
+
             $commits[$current] = $this->getCommitObject($current);
-            foreach($commits[$current]->getParentHashes() as $parent) {
+
+            foreach ($commits[$current]->getParentHashes() as $parent) {
                 if (!\in_array($parent, $this->ignoreCommits, true)) {
                     $pending[] = $parent;
                 }
@@ -322,7 +348,7 @@ class Merger
         return $commits;
     }
 
-    private function getCommitObject($hash)
+    private function getCommitObject($hash): Commit
     {
         if (isset($this->commitCache[$hash])) {
             return $this->commitCache[$hash];

@@ -9,9 +9,6 @@
             "homepage": "https://au.si/"
         }
     ],
-    "bin": [
-        "bin/monorepo-tools"
-    ],
     "require": {
         "php": "^7.1",
         "ext-json": "*",
@@ -24,9 +21,7 @@
     },
     "require-dev": {
         "composer/semver": "^1.0",
-        "friendsofphp/php-cs-fixer": "^2.12",
-        "php-coveralls/php-coveralls": "^2.1",
-        "phpunit/phpunit": "^5.7.26"
+        "friendsofphp/php-cs-fixer": "^2.12"
     },
     "autoload": {
         "psr-4": {
@@ -37,5 +32,8 @@
         "psr-4": {
             "Contao\\MonorepoTools\\Tests\\": "tests/"
         }
-    }
+    },
+    "bin": [
+        "bin/monorepo-tools"
+    ]
 }

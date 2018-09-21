@@ -17,9 +17,7 @@ use Contao\MonorepoTools\Command\MergeCommand;
 use Contao\MonorepoTools\Command\ComposerJsonCommand;
 
 $application = new Application();
-
 $application->add(new SplitCommand(dirname($composerDir)));
 $application->add(new MergeCommand(dirname($composerDir)));
 $application->add(new ComposerJsonCommand(dirname($composerDir)));
-
 $application->run();

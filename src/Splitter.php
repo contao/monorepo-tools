@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -15,16 +17,42 @@ use Contao\MonorepoTools\Git\Repository;
 use Contao\MonorepoTools\Git\Tree;
 use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Filesystem\Filesystem;
 
 class Splitter
 {
+    /**
+     * @var string
+     */
     private $monorepoUrl;
+
+    /**
+     * @var string
+     */
     private $branchFilter;
+
+    /**
+     * @var array
+     */
     private $repoUrlsByFolder;
+
+    /**
+     * @var string
+     */
     private $cacheDir;
+
+    /**
+     * @var bool
+     */
     private $forcePush;
+
+    /**
+     * @var string|null
+     */
     private $branchOrTag;
+
+    /**
+     * @var string
+     */
     private $objectsCachePath;
 
     /**
@@ -63,10 +91,11 @@ class Splitter
         }
     }
 
-    public function split()
+    public function split(): void
     {
         if (file_exists($this->objectsCachePath)) {
             $this->output->writeln("\nLoad data from cache...");
+
             [$this->commitCache, $this->treeCache] = unserialize(
                 file_get_contents($this->objectsCachePath),
                 [Commit::class, Tree::class]
@@ -78,12 +107,8 @@ class Splitter
         $this->repository = new Repository($this->cacheDir.'/repo.git', $this->output);
 
         if (is_dir($this->cacheDir.'/repo.git')) {
-            $this->repository
-                ->removeBranches()
-                ->removeTags()
-            ;
-        }
-        else {
+            $this->repository->removeBranches()->removeTags();
+        } else {
             $this->repository->init();
         }
 
@@ -94,19 +119,20 @@ class Splitter
         ;
 
         foreach ($this->repoUrlsByFolder as $subFolder => $config) {
-            $this->repository
-                ->addRemote($subFolder, $config['url'])
-            ;
+            $this->repository->addRemote($subFolder, $config['url']);
         }
 
         $this->repository->fetchConcurrent(array_keys($this->repoUrlsByFolder));
 
         foreach ($this->repoUrlsByFolder as $subFolder => $config) {
             foreach ($config['mapping'] as $monoHash => $splitHash) {
-                $monoTreeHash = $this->getTreeObject(
-                    $this->getCommitObject($monoHash)->getTreeHash()
-                )->getSubtreeHash($subFolder);
+                $monoTreeHash = $this
+                    ->getTreeObject($this->getCommitObject($monoHash)->getTreeHash())
+                    ->getSubtreeHash($subFolder)
+                ;
+
                 $splitTreeHash = $this->getCommitObject($splitHash)->getTreeHash();
+
                 if ($monoTreeHash !== $splitTreeHash) {
                     throw new \RuntimeException(sprintf(
                         'Invalid mapping from %s to %s. Tree for folder %s does not match.',
@@ -121,65 +147,59 @@ class Splitter
         $branchCommits = $this->repository->getRemoteBranches('mono');
         $tagCommits = [];
 
-        if ($this->branchOrTag !== null) {
-
+        if (null !== $this->branchOrTag) {
             if (isset($branchCommits[$this->branchOrTag])) {
                 if (!preg_match($this->branchFilter, $this->branchOrTag)) {
                     $this->output->writeln("\nBranch {$this->branchOrTag} does not match the branch filter {$this->branchFilter}.");
+
                     return;
                 }
 
                 // Only use the specified branch
-                $branchCommits = [
-                    $this->branchOrTag => $branchCommits[$this->branchOrTag],
-                ];
-            }
-            else {
+                $branchCommits = [$this->branchOrTag => $branchCommits[$this->branchOrTag]];
+            } else {
                 try {
                     $tagHash = $this->repository
                         ->fetchTag($this->branchOrTag, 'mono', 'remote/mono/')
                         ->getTag('remote/mono/'.$this->branchOrTag)
                     ;
-                }
-                catch (\Exception $e) {
+                } catch (\Exception $e) {
                     throw new InvalidArgumentException(sprintf(
                         'Branch or tag %s does not exist, use one of %s',
                         $this->branchOrTag,
                         implode(', ', array_keys($branchCommits))
                     ));
                 }
-                $tagCommits = [
-                    $this->branchOrTag => $tagHash,
-                ];
+
+                $tagCommits = [$this->branchOrTag => $tagHash];
                 $branchCommits = [];
             }
-
-        }
-        else {
+        } else {
             foreach ($branchCommits as $branch => $commitHash) {
                 if (!preg_match($this->branchFilter, $branch)) {
                     unset($branchCommits[$branch]);
                 }
             }
+
             if (!\count($branchCommits)) {
-                throw new \RuntimeException(sprintf(
-                    'No branch matching the filter %s found.',
-                    $this->branchFilter
-                ));
+                throw new \RuntimeException(sprintf('No branch matching the filter %s found.', $this->branchFilter));
             }
         }
 
         $this->output->writeln("\nRead commits...");
-        $commitObjects = $this->readCommits(array_merge(
-            array_values($branchCommits),
-            array_values($tagCommits)
-        ));
+
+        $commitObjects = $this->readCommits(array_merge(array_values($branchCommits), array_values($tagCommits)));
 
         if (empty($commitObjects)) {
-            throw new \RuntimeException(sprintf('No commits found for: %s %s', print_r($branchCommits, true), print_r($tagCommits, true)));
+            throw new \RuntimeException(sprintf(
+                'No commits found for: %s %s',
+                print_r($branchCommits, true),
+                print_r($tagCommits, true)
+            ));
         }
 
         $this->output->writeln("\nSplit commits...");
+
         $hashMapping = $this->splitCommits($commitObjects, $this->repoUrlsByFolder);
 
         if (empty($hashMapping)) {
@@ -191,6 +211,7 @@ class Splitter
 
         if (\count($branchCommits)) {
             $this->output->writeln("\nCreate branches...");
+
             foreach ($branchCommits as $branch => $commit) {
                 foreach ($this->repoUrlsByFolder as $subRepo => $config) {
                     if (isset($hashMapping[$subRepo][$commit])) {
@@ -203,6 +224,7 @@ class Splitter
 
         if (\count($tagCommits)) {
             $this->output->writeln("\nCreate tags...");
+
             foreach ($tagCommits as $tag => $commit) {
                 foreach ($this->repoUrlsByFolder as $subRepo => $config) {
                     if (isset($hashMapping[$subRepo][$commit])) {
@@ -214,6 +236,7 @@ class Splitter
         }
 
         $this->output->writeln("\nUpdate cache...");
+
         file_put_contents($this->objectsCachePath, serialize([$this->commitCache, $this->treeCache]));
 
         $this->output->writeln("\nPush to remotes...");
@@ -224,69 +247,86 @@ class Splitter
         $this->output->writeln("\nDone 🎉");
     }
 
-    private function splitCommits(array $commitObjects, array $subRepos)
+    /**
+     * @return array<string,string>
+     */
+    private function splitCommits(array $commitObjects, array $subRepos): array
     {
         $hashMapping = [];
+
         foreach ($subRepos as $subRepo => $config) {
             $hashMapping[$subRepo] = $config['mapping'];
         }
+
         $pending = array_keys($commitObjects);
-        while(count($pending)) {
+
+        while (\count($pending)) {
             $current = array_pop($pending);
+
             foreach ($subRepos as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$current])) {
                     continue 2;
                 }
             }
+
             $missingParents = [];
+
             foreach ($commitObjects[$current]->getParentHashes() as $parent) {
                 foreach ($subRepos as $subRepo => $config) {
                     if (isset($hashMapping[$subRepo][$parent])) {
                         continue 2;
                     }
                 }
+
                 $missingParents[] = $parent;
             }
-            if (count($missingParents)) {
+
+            if (\count($missingParents)) {
                 $pending[] = $current;
+
                 foreach ($missingParents as $parent) {
                     $pending[] = $parent;
                 }
+
                 continue;
             }
+
             $this->splitCommit($current, $commitObjects[$current]->getTreeHash(), $hashMapping, $subRepos);
         }
+
         return $hashMapping;
     }
 
-    private function splitCommit($commitHash, $treeHash, &$hashMapping, array $subRepos)
+    private function splitCommit($commitHash, $treeHash, &$hashMapping, array $subRepos): void
     {
-        $newCommits = [];
         $treeObject = $this->getTreeObject($treeHash);
         $failure = true;
+
         foreach ($subRepos as $subRepo => $config) {
             $subTreeHash = $treeObject->getSubtreeHash($subRepo);
+
             if (!$subTreeHash) {
-                if ($treeHash === '4b825dc642cb6eb9a060e54bf8d69288fbee4904') {
+                if ('4b825dc642cb6eb9a060e54bf8d69288fbee4904' === $treeHash) {
                     $subTreeHash = $treeHash;
-                }
-                else {
+                } else {
                     continue;
                 }
             }
+
             $hashMapping[$subRepo][$commitHash] = $this->createNewCommit($commitHash, $subTreeHash, $hashMapping[$subRepo]);
             $failure = false;
         }
+
         if ($failure) {
             throw new \RuntimeException(sprintf('No subfolder found in commit %s. %s', $commitHash, print_r($treeObject, true)));
         }
     }
 
-    private function createNewCommit(string $commitHash, string $treeHash, &$hashMapping)
+    private function createNewCommit(string $commitHash, string $treeHash, &$hashMapping): string
     {
         $commit = $this->getCommitObject($commitHash);
-
         $newParents = [];
+
         foreach ($commit->getParentHashes() as $parent) {
             if (isset($hashMapping[$parent]) && !\in_array($hashMapping[$parent], $newParents, true)) {
                 $newParents[] = $hashMapping[$parent];
@@ -310,23 +350,30 @@ class Splitter
         return $newHash;
     }
 
+    /**
+     * @return array<string,string>
+     */
     private function readCommits(array $baseCommits): array
     {
         $commits = [];
         $pending = $baseCommits;
 
-        while(count($pending)) {
+        while (\count($pending)) {
             $current = array_shift($pending);
+
             if (isset($commits[$current])) {
                 continue;
             }
+
             $commits[$current] = $this->getCommitObject($current);
+
             foreach ($this->repoUrlsByFolder as $config) {
                 if (isset($config['mapping'][$current])) {
                     continue 2;
                 }
             }
-            foreach($commits[$current]->getParentHashes() as $parent) {
+
+            foreach ($commits[$current]->getParentHashes() as $parent) {
                 $pending[] = $parent;
             }
         }

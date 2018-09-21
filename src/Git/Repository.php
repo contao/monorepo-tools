@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -17,6 +19,9 @@ use Symfony\Component\Process\Process;
 
 class Repository
 {
+    /**
+     * @var string
+     */
     private $path;
 
     /**
@@ -30,9 +35,6 @@ class Repository
         $this->output = $output;
     }
 
-    /**
-     * @return static
-     */
     public function init(): self
     {
         $this->execute('git --git-dir='.escapeshellarg($this->path).' init --bare '.escapeshellarg($this->path));
@@ -65,8 +67,7 @@ class Repository
     {
         if (\in_array($name, $this->run('git --git-dir='.escapeshellarg($this->path).' remote'), true)) {
             $this->execute('git --git-dir='.escapeshellarg($this->path).' remote set-url '.escapeshellarg($name).' '.escapeshellarg($url));
-        }
-        else {
+        } else {
             $this->execute('git --git-dir='.escapeshellarg($this->path).' remote add '.escapeshellarg($name).' '.escapeshellarg($url));
         }
 
@@ -89,9 +90,14 @@ class Repository
 
     public function fetchConcurrent(array $remotes): self
     {
-        $this->executeConcurrent(array_map(function($remote) {
-            return 'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote);
-        }, $remotes));
+        $this->executeConcurrent(
+            array_map(
+                function ($remote) {
+                    return 'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote);
+                },
+                $remotes
+            )
+        );
 
         return $this;
     }
@@ -122,11 +128,14 @@ class Repository
     public function getRemoteBranches(string $remote): array
     {
         $branches = [];
+
         foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' branch -r') as $branch) {
             $branch = trim($branch);
-            if ($branch === '' || strncmp($branch, $remote.'/', \strlen($remote.'/')) !== 0) {
+
+            if ('' === $branch || 0 !== strncmp($branch, $remote.'/', \strlen($remote.'/'))) {
                 continue;
             }
+
             $branch = substr($branch, \strlen($remote.'/'));
             $branches[$branch] = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-parse '.escapeshellarg($remote.'/'.$branch))[0];
         }
@@ -140,11 +149,13 @@ class Repository
     public function getTags(string $prefix): array
     {
         $tags = [];
+
         foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' tag -l '.escapeshellarg($prefix.'*')) as $tag) {
-            if ($tag === '') {
+            if ('' === $tag) {
                 continue;
             }
-            $tag = substr(trim($tag), strlen($prefix));
+
+            $tag = substr(trim($tag), \strlen($prefix));
             $tags[$tag] = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-list -n 1 '.escapeshellarg($prefix.$tag))[0];
         }
 
@@ -155,7 +166,7 @@ class Repository
     {
         $result = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-list -n 1 '.escapeshellarg($tag));
 
-        if (!\count($result) || \strlen($result[0]) !== 40) {
+        if (!\count($result) || 40 !== \strlen($result[0])) {
             throw new \RuntimeException(sprintf('Tag %s not found.', $tag));
         }
 
@@ -189,14 +200,18 @@ class Repository
     public function commitTree(string $treeHash, string $message, array $parents = [], bool $copyDateFromParents = false): string
     {
         $prefix = '';
+
         if ($copyDateFromParents) {
             $date = null;
+
             foreach ($parents as $parentHash) {
                 $parentDate = $this->getCommit($parentHash)->getCommitterDate();
+
                 if (!$date || $parentDate > $date) {
                     $date = $parentDate;
                 }
             }
+
             if ($date) {
                 $prefix =
                     'GIT_AUTHOR_DATE='.escapeshellarg($date->format('U O'))
@@ -204,6 +219,7 @@ class Repository
                 ;
             }
         }
+
         return $this->run(
             $prefix
             .'git --git-dir='.escapeshellarg($this->path).' commit-tree'
@@ -235,9 +251,15 @@ class Repository
 
     public function pushBranches(array $branches, bool $force = false): self
     {
-        $this->pushRefspecs(array_map(function($pushBranch) {
-            return ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]];
-        }, $branches), $force);
+        $this->pushRefspecs(
+            array_map(
+                function ($pushBranch) {
+                    return ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]];
+                },
+                $branches
+            ),
+            $force
+        );
 
         return $this;
     }
@@ -251,9 +273,31 @@ class Repository
 
     public function pushTags(array $tags, bool $force = false): self
     {
-        $this->pushRefspecs(array_map(function($pushTag) {
-            return ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]];
-        }, $tags), $force);
+        $this->pushRefspecs(
+            array_map(
+                function ($pushTag) {
+                    return ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]];
+                },
+                $tags
+            ),
+            $force
+        );
+
+        return $this;
+    }
+
+    public function addObject(GitObject $object): self
+    {
+        $hash = $object->getHash();
+        $path = $this->path.'/objects/'.substr($hash, 0, 2).'/'.substr($hash, 2);
+
+        if (!is_dir(\dirname($path)) && !mkdir(\dirname($path), 0777, true) && !is_dir(\dirname($path))) {
+            throw new \RuntimeException(sprintf('Unable to create directory %s', \dirname($path)));
+        }
+
+        if (!file_exists($path)) {
+            file_put_contents($path, $object->getGitObjectBytes());
+        }
 
         return $this;
     }
@@ -273,30 +317,22 @@ class Repository
 
     private function pushRefspecs(array $refspecsRemote, bool $force): void
     {
-        $this->executeConcurrent(array_map(function($refspecRemote) use($force) {
-            $command = 'git --git-dir='.escapeshellarg($this->path).' push';
-            if ($force) {
-                $command .= ' --force';
-            }
-            $command .= ' '.escapeshellarg($refspecRemote[1]).' '.escapeshellarg($refspecRemote[0]);
-            return $command;
-        }, $refspecsRemote));
-    }
+        $this->executeConcurrent(
+            array_map(
+                function ($refspecRemote) use ($force) {
+                    $command = 'git --git-dir='.escapeshellarg($this->path).' push';
 
-    public function addObject(GitObject $object): self
-    {
-        $hash = $object->getHash();
-        $path = $this->path.'/objects/'.substr($hash, 0, 2).'/'.substr($hash, 2);
+                    if ($force) {
+                        $command .= ' --force';
+                    }
 
-        if (!is_dir(\dirname($path)) && !mkdir(\dirname($path), 0777, true) && !is_dir(\dirname($path))) {
-            throw new \RuntimeException(sprintf('Unable to create directory %s', \dirname($path)));
-        }
+                    $command .= ' '.escapeshellarg($refspecRemote[1]).' '.escapeshellarg($refspecRemote[0]);
 
-        if (!file_exists($path)) {
-            file_put_contents($path, $object->getGitObjectBytes());
-        }
-
-        return $this;
+                    return $command;
+                },
+                $refspecsRemote
+            )
+        );
     }
 
     private function run($command, $exitOnFailure = true): array
@@ -306,7 +342,6 @@ class Repository
 
         // Erase the line
         $this->output->write("\x1B[2K");
-
         $this->output->write($command);
 
         $process = new Process($command);
@@ -326,9 +361,11 @@ class Repository
         $process = new Process($command);
         $process->setTimeout(600);
         $process->start();
+
         foreach ($process->getIterator() as $data) {
             $this->output->write($data);
         }
+
         $process->wait();
 
         if ($exitOnFailure && !$process->isSuccessful()) {
@@ -342,6 +379,7 @@ class Repository
 
         foreach ($commands as $command) {
             $this->output->writeln('   $ '.$command);
+
             $process = new Process($command);
             $processes[] = $process;
             $process->setTimeout(600);
@@ -352,6 +390,7 @@ class Repository
             foreach ($process->getIterator() as $data) {
                 $this->output->write($data);
             }
+
             $process->wait();
         }
 

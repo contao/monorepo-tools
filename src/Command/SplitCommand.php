@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -22,6 +24,9 @@ use Symfony\Component\Yaml\Yaml;
 
 class SplitCommand extends Command
 {
+    /**
+     * @var string
+     */
     private $rootDir;
 
     public function __construct(string $rootDir)
@@ -35,7 +40,6 @@ class SplitCommand extends Command
     {
         $this
             ->setName('split')
-            ->setDescription('Split monorepo into repositories by subfolder.')
             ->addArgument(
                 'branch-or-tag',
                 InputArgument::OPTIONAL,
@@ -53,6 +57,7 @@ class SplitCommand extends Command
                 null,
                 'Force push branches (not tags) to splitted remotes. Dangerous!'
             )
+            ->setDescription('Split the monorepo into repositories by subfolder.')
         ;
     }
 
@@ -60,11 +65,13 @@ class SplitCommand extends Command
     {
         $config = (new Processor())->processConfiguration(
             new MonorepoConfiguration(),
-            [Yaml::parse(file_get_contents(
-                file_exists($this->rootDir.'/monorepo-split.yml')
-                    ? $this->rootDir.'/monorepo-split.yml'
-                    : $this->rootDir.'/monorepo.yml'
-            ))]
+            [
+                Yaml::parse(file_get_contents(
+                    file_exists($this->rootDir.'/monorepo-split.yml')
+                        ? $this->rootDir.'/monorepo-split.yml'
+                        : $this->rootDir.'/monorepo.yml'
+                )),
+            ]
         );
 
         foreach ($config['repositories'] as $folder => $settings) {
@@ -86,10 +93,7 @@ class SplitCommand extends Command
 
     private function addAuthToken($repoUrl): string
     {
-        if (
-            ($token = getenv('GITHUB_TOKEN'))
-            && strncmp($repoUrl, 'https://github.com/', 19) === 0
-        ) {
+        if (($token = getenv('GITHUB_TOKEN')) && 0 === strncmp($repoUrl, 'https://github.com/', 19)) {
             return 'https://'.$token.'@github.com/'.substr($repoUrl, 19);
         }
 

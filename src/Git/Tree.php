@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -12,6 +14,9 @@ namespace Contao\MonorepoTools\Git;
 
 class Tree extends GitObject
 {
+    /**
+     * @var array
+     */
     private $entries = [];
 
     public function __construct(string $rawTree)
@@ -25,7 +30,8 @@ class Tree extends GitObject
         ) {
             $nextSpace = strpos($rawTree, ' ', $offset);
             $nextNull = strpos($rawTree, "\0", $offset);
-            if ($nextSpace === false || $nextNull === false || $nextSpace > $nextNull) {
+
+            if (false === $nextSpace || false === $nextNull || $nextSpace > $nextNull) {
                 throw new \RuntimeException('Invalid tree object.');
             }
 
@@ -37,13 +43,11 @@ class Tree extends GitObject
 
     /**
      * @param static[] $trees
-     *
-     * @return static
      */
     public static function createFromTrees(array $trees): self
     {
         return new static(implode('', array_map(
-            function(self $tree) {
+            function (self $tree) {
                 return $tree->getRaw();
             },
             $trees

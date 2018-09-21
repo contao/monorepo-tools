@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -13,6 +15,7 @@ namespace Contao\MonorepoTools\Command;
 use Composer\Semver\Comparator;
 use Composer\Semver\VersionParser;
 use Contao\MonorepoTools\Config\MonorepoConfiguration;
+use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\RuntimeException;
@@ -22,10 +25,20 @@ use Symfony\Component\Yaml\Yaml;
 
 class ComposerJsonCommand extends Command
 {
+    /**
+     * @var string
+     */
     private $rootDir;
+
+    /**
+     * @var ConfigurationInterface
+     */
     private $config;
-    private $composerFilePaths;
-    private $replacedPackages;
+
+    /**
+     * @var array
+     */
+    private $replacedPackages = [];
 
     public function __construct(string $rootDir)
     {
@@ -34,17 +47,52 @@ class ComposerJsonCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * @return string[]
+     */
+    public function validateJsons(string $rootJson, array $splitJsons): array
+    {
+        $jsonsByPath = array_combine(
+            array_map(
+                function ($folder) {
+                    return $this->rootDir.'/'.$folder.'/composer.json';
+                },
+                array_keys($splitJsons)
+            ),
+            array_values($splitJsons)
+        );
+
+        $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
+
+        $valid = [];
+        $invalid = [];
+
+        foreach ($jsonsByPath as $path => $json) {
+            if (json_decode(file_get_contents($path)) === json_decode($json)) {
+                $valid[] = $path;
+            } else {
+                $invalid[] = $path;
+            }
+        }
+
+        if (\count($invalid)) {
+            throw new RuntimeException(sprintf("composer.json not up to date:\n%s", implode("\n", $invalid)));
+        }
+
+        return $valid;
+    }
+
     protected function configure(): void
     {
         $this
             ->setName('composer-json')
-            ->setDescription('Merge all composer.json files into the root composer.json and update the branch-alias.')
             ->addOption(
                 'validate',
                 null,
                 null,
-                'Validate if the composer.json files are already up to date.'
+                'Validate if the composer.json files are up to date.'
             )
+            ->setDescription('Merge all composer.json files into the root composer.json file and update the branch alias.')
         ;
     }
 
@@ -52,11 +100,13 @@ class ComposerJsonCommand extends Command
     {
         $this->config = (new Processor())->processConfiguration(
             new MonorepoConfiguration(),
-            [Yaml::parse(file_get_contents(
-                file_exists($this->rootDir.'/monorepo-split.yml')
-                    ? $this->rootDir.'/monorepo-split.yml'
-                    : $this->rootDir.'/monorepo.yml'
-            ))]
+            [
+                Yaml::parse(file_get_contents(
+                    file_exists($this->rootDir.'/monorepo-split.yml')
+                        ? $this->rootDir.'/monorepo-split.yml'
+                        : $this->rootDir.'/monorepo.yml'
+                )),
+            ]
         );
 
         $rootJson = $this->getCombinedJson();
@@ -64,65 +114,39 @@ class ComposerJsonCommand extends Command
 
         if ($input->getOption('validate')) {
             $jsonPaths = $this->validateJsons($rootJson, $splitJsons);
-            foreach($jsonPaths as $path) {
+
+            foreach ($jsonPaths as $path) {
                 $output->writeln('Validated '.$path);
             }
-        }
-        else {
+        } else {
             $jsonPaths = $this->updateJsons($rootJson, $splitJsons);
-            foreach($jsonPaths as $path) {
+
+            foreach ($jsonPaths as $path) {
                 $output->writeln('Updated '.$path);
             }
         }
     }
 
-    public function validateJsons(string $rootJson, array $splitJsons): array
-    {
-        $jsonsByPath = array_combine(
-            array_map(function($folder) {
-                return $this->rootDir.'/'.$folder.'/composer.json';
-            }, array_keys($splitJsons)),
-            array_values($splitJsons)
-        );
-        $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
-
-        $valid = [];
-        $invalid = [];
-
-        foreach ($jsonsByPath as $path => $json) {
-            if (json_decode(file_get_contents($path)) == json_decode($json)) {
-                $valid[] = $path;
-            }
-            else {
-                $invalid[] = $path;
-            }
-        }
-
-        if (\count($invalid)) {
-            throw new RuntimeException(sprintf(
-                "composer.json not up to date:\n%s",
-                implode("\n", $invalid)
-            ));
-        }
-
-        return $valid;
-    }
-
+    /**
+     * @return array<string,string>
+     */
     private function updateJsons(string $rootJson, array $splitJsons): array
     {
         $jsonsByPath = array_combine(
-            array_map(function($folder) {
-                return $this->rootDir.'/'.$folder.'/composer.json';
-            }, array_keys($splitJsons)),
+            array_map(
+                function ($folder) {
+                    return $this->rootDir.'/'.$folder.'/composer.json';
+                },
+                array_keys($splitJsons)
+            ),
             array_values($splitJsons)
         );
+
         $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
 
         foreach ($jsonsByPath as $path => $json) {
             if (!file_put_contents($path, $json)) {
-                throw new RuntimeException(
-                    sprintf('Unable to write to %s', $path)
-                );
+                throw new RuntimeException(sprintf('Unable to write to %s', $path));
             }
         }
 
@@ -133,9 +157,9 @@ class ComposerJsonCommand extends Command
     {
         $rootJson = json_decode(file_get_contents($this->rootDir.'/composer.json'), true);
 
-        $this->replacedPackages = [];
         if (file_exists($this->rootDir.'/vendor/composer/installed.json')) {
             $installedJson = json_decode(file_get_contents($this->rootDir.'/vendor/composer/installed.json'), true);
+
             foreach ($installedJson as $package) {
                 if (isset($package['replace'])) {
                     $this->replacedPackages[$package['name']] = $package['replace'];
@@ -143,69 +167,114 @@ class ComposerJsonCommand extends Command
             }
         }
 
-        $jsons = array_map(function($folder) {
-            $path = $this->rootDir.'/'.$folder.'/composer.json';
-            if (!file_exists($path)) {
-                throw new \InvalidArgumentException(
-                    sprintf('File %s doesn’t exist.', $path)
-                );
-            }
-            return json_decode(file_get_contents($path), true);
-        }, array_combine(
-            array_keys($this->config['repositories']),
-            array_keys($this->config['repositories'])
-        ));
+        $jsons = array_map(
+            function ($folder) {
+                $path = $this->rootDir.'/'.$folder.'/composer.json';
 
-        $rootJson['replace'] = array_combine(
-            array_map(function($json) {
-                return $json['name'];
-            }, $jsons),
-            array_map(function() {
-                return 'self.version';
-            }, $jsons)
+                if (!file_exists($path)) {
+                    throw new \InvalidArgumentException(sprintf('File %s doesn’t exist.', $path));
+                }
+
+                return json_decode(file_get_contents($path), true);
+            },
+            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
         );
 
-        $rootJson['require'] = $this->combineDependecies(array_merge(
-            array_map(function($json) {
-                return $json['require'] ?? [];
-            }, $jsons),
-            [$this->config['composer']['require'] ?? []]
-        ), array_keys($rootJson['replace']));
+        $rootJson['replace'] = array_combine(
+            array_map(
+                function ($json) {
+                    return $json['name'];
+                },
+                $jsons
+            ),
+            array_map(
+                function () {
+                    return 'self.version';
+                },
+                $jsons
+            )
+        );
 
-        $rootJson['require-dev'] = $this->combineDependecies(array_merge(
-            array_map(function($json) {
-                return $json['require-dev'] ?? [];
-            }, $jsons),
-            [$this->config['composer']['require-dev'] ?? []]
-        ), array_keys($rootJson['replace']));
+        $rootJson['require'] = $this->combineDependecies(
+            array_merge(
+                array_map(
+                    function ($json) {
+                        return $json['require'] ?? [];
+                    },
+                    $jsons
+                ),
+                [$this->config['composer']['require'] ?? []]
+            ),
+            array_keys($rootJson['replace'])
+        );
+
+        $rootJson['require-dev'] = $this->combineDependecies(
+            array_merge(
+                array_map(
+                    function ($json) {
+                        return $json['require-dev'] ?? [];
+                    },
+                    $jsons
+                ),
+                [$this->config['composer']['require-dev'] ?? []]
+            ),
+            array_keys($rootJson['replace'])
+        );
 
         foreach ($rootJson['require'] as $packageName => $versionConstraint) {
             if (isset($rootJson['require-dev'][$packageName])) {
-                $rootJson['require'][$packageName] = $this->combineConstraints([
-                    $rootJson['require-dev'][$packageName],
-                    $versionConstraint,
-                ], $packageName);
+                $rootJson['require'][$packageName] = $this->combineConstraints(
+                    [
+                        $rootJson['require-dev'][$packageName],
+                        $versionConstraint,
+                    ],
+                    $packageName
+                );
+
                 unset($rootJson['require-dev'][$packageName]);
             }
         }
 
-        $rootJson['conflict'] = $this->combineDependecies(array_map(function($json) {
-            return $json['conflict'] ?? [];
-        }, $jsons), array_keys($rootJson['replace']));
+        $rootJson['conflict'] = $this->combineDependecies(
+            array_map(
+                function ($json) {
+                    return $json['conflict'] ?? [];
+                },
+                $jsons
+            ),
+            array_keys($rootJson['replace'])
+        );
 
-        $rootJson['bin'] = $this->combineBins(array_map(function($json) {
-            return $json['bin'] ?? [];
-        }, $jsons));
+        $rootJson['bin'] = $this->combineBins(
+            array_map(
+                function ($json) {
+                    return $json['bin'] ?? [];
+                },
+                $jsons
+            )
+        );
 
         $rootJson['extra']['contao-manager-plugin'] = $this->combineManagerPlugins($jsons);
 
-        $rootJson['autoload'] = $this->combineAutoload(array_map(function($json) {
-            return $json['autoload'] ?? [];
-        }, $jsons), $rootJson['autoload'] ?? null);
+        $rootJson['autoload'] = $this->combineAutoload(
+            array_map(
+                function ($json) {
+                    return $json['autoload'] ?? [];
+                },
+                $jsons
+            ),
+            $rootJson['autoload'] ?? null
+        );
 
-        $rootJson['autoload-dev'] = $this->combineAutoload(array_map(function($json) {
-            return $json['autoload-dev'] ?? [];
-        }, $jsons), $rootJson['autoload-dev'] ?? null);
+        $rootJson['autoload-dev'] = $this->combineAutoload(
+            array_map(
+                function ($json) {
+                    return $json['autoload-dev'] ?? [];
+                },
+                $jsons
+            ),
+            $rootJson['autoload-dev'] ?? null
+        );
 
         return json_encode($rootJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
     }
@@ -213,11 +282,13 @@ class ComposerJsonCommand extends Command
     private function combineDependecies(array $requireArrays, array $ignorePackages = []): array
     {
         $requires = [];
+
         foreach ($requireArrays as $require) {
             foreach ($require as $packageName => $versionConstraint) {
                 if (\in_array($packageName, $ignorePackages, true)) {
                     continue;
                 }
+
                 $requires[$packageName][] = $versionConstraint;
             }
         }
@@ -227,6 +298,7 @@ class ComposerJsonCommand extends Command
             if (!isset($this->replacedPackages[$packageName])) {
                 continue;
             }
+
             foreach ($this->replacedPackages[$packageName] as $replacedPackageName => $versionConstraint) {
                 if (isset($requires[$replacedPackageName])) {
                     $requires[$packageName] = array_merge($requires[$packageName], $requires[$replacedPackageName]);
@@ -239,24 +311,25 @@ class ComposerJsonCommand extends Command
             $requires[$packageName] = $this->combineConstraints($constraints, $packageName);
         }
 
-        uksort($requires, function($a, $b) {
-
-            if ($a === 'php') {
+        uksort($requires, function ($a, $b) {
+            if ('php' === $a) {
                 return -1;
             }
-            if ($b === 'php') {
+
+            if ('php' === $b) {
                 return 1;
             }
 
             if (
-                (strncmp($a, 'ext-', 4) === 0 && strncmp($b, 'ext-', 4) !== 0)
-                || (strncmp($a, 'lib-', 4) === 0 && strncmp($b, 'lib-', 4) !== 0)
+                (0 === strncmp($a, 'ext-', 4) && 0 !== strncmp($b, 'ext-', 4))
+                || (0 === strncmp($a, 'lib-', 4) && 0 !== strncmp($b, 'lib-', 4))
             ) {
                 return -1;
             }
+
             if (
-                (strncmp($a, 'ext-', 4) !== 0 && strncmp($b, 'ext-', 4) === 0)
-                || (strncmp($a, 'lib-', 4) !== 0 && strncmp($b, 'lib-', 4) === 0)
+                (0 !== strncmp($a, 'ext-', 4) && 0 === strncmp($b, 'ext-', 4))
+                || (0 !== strncmp($a, 'lib-', 4) && 0 === strncmp($b, 'lib-', 4))
             ) {
                 return 1;
             }
@@ -271,9 +344,8 @@ class ComposerJsonCommand extends Command
     {
         $constraints = array_unique($constraints);
 
-        return array_reduce($constraints, function ($a, $b) use($name)
-        {
-            if ($a === null) {
+        return array_reduce($constraints, function ($a, $b) use ($name) {
+            if (null === $a) {
                 return $b;
             }
 
@@ -306,9 +378,7 @@ class ComposerJsonCommand extends Command
             }
 
             foreach ($aParts as $aKey => $aPart) {
-
                 foreach ($bParts as $bKey => $bPart) {
-
                     if (!$versionParser->parseConstraints($aPart)->matches($versionParser->parseConstraints($bPart))) {
                         continue;
                     }
@@ -323,6 +393,7 @@ class ComposerJsonCommand extends Command
                             unset($bParts[$bKey]);
                             continue;
                         }
+
                         unset($aParts[$aKey]);
                         continue 2;
                     }
@@ -343,9 +414,7 @@ class ComposerJsonCommand extends Command
                         $b,
                         $name
                     ));
-
                 }
-
             }
 
             return trim(implode(' || ', $aParts).' || '.implode(' || ', $bParts), ' |');
@@ -355,6 +424,7 @@ class ComposerJsonCommand extends Command
     private function combineBins(array $binaryPaths): array
     {
         $returnPaths = [];
+
         foreach ($binaryPaths as $folder => $paths) {
             foreach ($paths as $path) {
                 $returnPaths[] = $folder.'/'.$path;
@@ -366,24 +436,26 @@ class ComposerJsonCommand extends Command
 
     private function combineManagerPlugins(array $jsons): array
     {
-        return call_user_func_array('array_merge', array_map(function($json): array {
-            if (!isset($json['extra']['contao-manager-plugin'])) {
-                return [];
-            }
-            if (\is_string($json['extra']['contao-manager-plugin'])) {
-                return [$json['name'] => $json['extra']['contao-manager-plugin']];
-            }
-            return $json['extra']['contao-manager-plugin'];
-        }, $jsons));
+        return array_merge(...array_map(
+            function ($json): array {
+                if (!isset($json['extra']['contao-manager-plugin'])) {
+                    return [];
+                }
+
+                if (\is_string($json['extra']['contao-manager-plugin'])) {
+                    return [$json['name'] => $json['extra']['contao-manager-plugin']];
+                }
+
+                return $json['extra']['contao-manager-plugin'];
+            },
+            $jsons
+        ));
     }
 
     private function combineAutoload(array $autoloadConfigs, array $currentAutoload = null): array
     {
         $returnAutoload = \is_array($currentAutoload)
-            ? array_combine(
-                array_keys($currentAutoload),
-                array_fill(0, \count($currentAutoload), [])
-            )
+            ? array_combine(array_keys($currentAutoload), array_fill(0, \count($currentAutoload), []))
             : [
                 'psr-4' => [],
                 'classmap' => [],
@@ -398,16 +470,19 @@ class ComposerJsonCommand extends Command
                     $returnAutoload['psr-4'][$namespace] = $folder.'/'.$path;
                 }
             }
+
             if (isset($autoload['classmap'])) {
                 foreach ($autoload['classmap'] as $path) {
                     $returnAutoload['classmap'][] = $folder.'/'.$path;
                 }
             }
+
             if (isset($autoload['exclude-from-classmap'])) {
                 foreach ($autoload['exclude-from-classmap'] as $path) {
                     $returnAutoload['exclude-from-classmap'][] = $folder.'/'.$path;
                 }
             }
+
             if (isset($autoload['files'])) {
                 foreach ($autoload['files'] as $path) {
                     $returnAutoload['files'][] = $folder.'/'.$path;
@@ -415,11 +490,10 @@ class ComposerJsonCommand extends Command
             }
         }
 
-        foreach($returnAutoload as &$autoloadArray) {
+        foreach ($returnAutoload as &$autoloadArray) {
             if (array_keys($autoloadArray) === range(0, \count($autoloadArray) - 1)) {
                 sort($autoloadArray);
-            }
-            else {
+            } else {
                 ksort($autoloadArray);
             }
         }
@@ -431,31 +505,37 @@ class ComposerJsonCommand extends Command
     {
         $rootJson = json_decode(file_get_contents($this->rootDir.'/composer.json'), true);
 
-        $jsons = array_map(function($folder) {
-            $path = $this->rootDir.'/'.$folder.'/composer.json';
-            if (!file_exists($path)) {
-                throw new \InvalidArgumentException(
-                    sprintf('File %s doesn’t exist.', $path)
-                );
-            }
-            return json_decode(file_get_contents($path), true);
-        }, array_combine(
-            array_keys($this->config['repositories']),
-            array_keys($this->config['repositories'])
-        ));
+        $jsons = array_map(
+            function ($folder) {
+                $path = $this->rootDir.'/'.$folder.'/composer.json';
 
-        $jsons = array_map(function($json) use($rootJson) {
-            if (isset($rootJson['extra']['branch-alias'])) {
-                $json['extra']['branch-alias'] = $rootJson['extra']['branch-alias'];
-            }
-            elseif (isset($json['extra']['branch-alias'])) {
-                unset($json['extra']['branch-alias']);
-            }
-            return $json;
-        }, $jsons);
+                if (!file_exists($path)) {
+                    throw new \InvalidArgumentException(sprintf('File %s doesn’t exist.', $path));
+                }
 
-        return array_map(function($json) {
-            return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
-        }, $jsons);
+                return json_decode(file_get_contents($path), true);
+            },
+            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
+        );
+
+        $jsons = array_map(
+            function ($json) use ($rootJson) {
+                if (isset($rootJson['extra']['branch-alias'])) {
+                    $json['extra']['branch-alias'] = $rootJson['extra']['branch-alias'];
+                } elseif (isset($json['extra']['branch-alias'])) {
+                    unset($json['extra']['branch-alias']);
+                }
+
+                return $json;
+            },
+            $jsons
+        );
+
+        return array_map(
+            function ($json) {
+                return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
+            },
+            $jsons
+        );
     }
 }

@@ -1,34 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
 
 namespace Contao\MonorepoTools\Config;
 
-use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
+use Symfony\Component\Config\Definition\ConfigurationInterface;
 
 class MonorepoConfiguration implements ConfigurationInterface
 {
-    public function getConfigTreeBuilder()
+    public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder();
         $rootNode = $treeBuilder->root('monorepo');
 
         $rootNode
             ->children()
-                ->scalarNode('monorepo_url')->isRequired()->end()
+                ->scalarNode('monorepo_url')
+                    ->isRequired()
+                ->end()
                 ->scalarNode('branch_filter')
                     ->isRequired()
                     ->validate()
-                        ->ifTrue(function ($value) {
-                            return @preg_match($value, '') === false;
-                        })
+                        ->ifTrue(
+                            function ($value) {
+                                return false === @preg_match($value, '');
+                            }
+                        )
                         ->thenInvalid('Filter must be a valid RegEx %s given.')
                     ->end()
                 ->end()
@@ -38,7 +44,9 @@ class MonorepoConfiguration implements ConfigurationInterface
                     ->normalizeKeys(false)
                     ->arrayPrototype()
                         ->children()
-                            ->scalarNode('url')->isRequired()->end()
+                            ->scalarNode('url')
+                                ->isRequired()
+                            ->end()
                             ->arrayNode('mapping')
                                 ->useAttributeAsKey('sourceHash')
                                 ->normalizeKeys(false)

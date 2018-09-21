@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 /*
- * This file is part of Contao.
+ * This file is part of the Contao monorepo tools.
  *
- * (c) Leo Feyer
+ * (c) Martin Auswöger
  *
  * @license LGPL-3.0-or-later
  */
@@ -17,6 +19,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class MergeCommand extends Command
 {
+    /**
+     * @var string
+     */
     private $rootDir;
 
     public function __construct(string $rootDir)
@@ -37,13 +42,6 @@ class MergeCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): void
     {
         $merger = new Merger(
-            \dirname(__DIR__, 2).'/test-repos/mono/.git',
-            /*
-            [
-                'faq-bundle' => \dirname(__DIR__, 2).'/test-repos/faq-bundle/.git',
-                'listing-bundle' => \dirname(__DIR__, 2).'/test-repos/listing-bundle/.git',
-            ],
-            */
             [
                 'calendar-bundle' => 'git@github.com:contao/calendar-bundle.git',
                 'comments-bundle' => 'git@github.com:contao/comments-bundle.git',
@@ -55,8 +53,7 @@ class MergeCommand extends Command
                 'news-bundle' => 'git@github.com:contao/news-bundle.git',
                 'newsletter-bundle' => 'git@github.com:contao/newsletter-bundle.git',
             ],
-            [
-            ],
+            [],
             $this->rootDir.'/.monorepo-merge-cache',
             $output
         );
