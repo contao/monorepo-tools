@@ -448,7 +448,7 @@ class ComposerJsonCommand extends Command
 
                 return $json['extra']['contao-manager-plugin'];
             },
-            $jsons
+            array_values($jsons)
         ));
     }
 
