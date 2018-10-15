@@ -68,7 +68,7 @@ class ComposerJsonCommand extends Command
         $invalid = [];
 
         foreach ($jsonsByPath as $path => $json) {
-            if (json_decode(file_get_contents($path)) === json_decode($json)) {
+            if (json_decode(file_get_contents($path)) == json_decode($json)) {
                 $valid[] = $path;
             } else {
                 $invalid[] = $path;
