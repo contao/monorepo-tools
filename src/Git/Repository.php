@@ -253,7 +253,7 @@ class Repository
     {
         $this->pushRefspecs(
             array_map(
-                function ($pushBranch) {
+                static function ($pushBranch) {
                     return ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]];
                 },
                 $branches
@@ -275,7 +275,7 @@ class Repository
     {
         $this->pushRefspecs(
             array_map(
-                function ($pushTag) {
+                static function ($pushTag) {
                     return ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]];
                 },
                 $tags

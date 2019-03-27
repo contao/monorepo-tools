@@ -28,11 +28,6 @@
             "Contao\\MonorepoTools\\": "src/"
         }
     },
-    "autoload-dev": {
-        "psr-4": {
-            "Contao\\MonorepoTools\\Tests\\": "tests/"
-        }
-    },
     "bin": [
         "bin/monorepo-tools"
     ]

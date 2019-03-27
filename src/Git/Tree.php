@@ -47,7 +47,7 @@ class Tree extends GitObject
     public static function createFromTrees(array $trees): self
     {
         return new static(implode('', array_map(
-            function (self $tree) {
+            static function (self $tree) {
                 return $tree->getRaw();
             },
             $trees

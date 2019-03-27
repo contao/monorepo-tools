@@ -31,7 +31,7 @@ class MonorepoConfiguration implements ConfigurationInterface
                     ->isRequired()
                     ->validate()
                         ->ifTrue(
-                            function ($value) {
+                            static function ($value) {
                                 return false === @preg_match($value, '');
                             }
                         )

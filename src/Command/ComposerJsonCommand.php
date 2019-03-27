@@ -182,13 +182,13 @@ class ComposerJsonCommand extends Command
 
         $rootJson['replace'] = array_combine(
             array_map(
-                function ($json) {
+                static function ($json) {
                     return $json['name'];
                 },
                 $jsons
             ),
             array_map(
-                function () {
+                static function () {
                     return 'self.version';
                 },
                 $jsons
@@ -198,7 +198,7 @@ class ComposerJsonCommand extends Command
         $rootJson['require'] = $this->combineDependecies(
             array_merge(
                 array_map(
-                    function ($json) {
+                    static function ($json) {
                         return $json['require'] ?? [];
                     },
                     $jsons
@@ -211,7 +211,7 @@ class ComposerJsonCommand extends Command
         $rootJson['require-dev'] = $this->combineDependecies(
             array_merge(
                 array_map(
-                    function ($json) {
+                    static function ($json) {
                         return $json['require-dev'] ?? [];
                     },
                     $jsons
@@ -238,7 +238,7 @@ class ComposerJsonCommand extends Command
         $rootJson['conflict'] = $this->combineDependecies(
             array_merge(
                 array_map(
-                    function ($json) {
+                    static function ($json) {
                         return $json['conflict'] ?? [];
                     },
                     $jsons
@@ -250,7 +250,7 @@ class ComposerJsonCommand extends Command
 
         $rootJson['bin'] = $this->combineBins(
             array_map(
-                function ($json) {
+                static function ($json) {
                     return $json['bin'] ?? [];
                 },
                 $jsons
@@ -261,7 +261,7 @@ class ComposerJsonCommand extends Command
 
         $rootJson['autoload'] = $this->combineAutoload(
             array_map(
-                function ($json) {
+                static function ($json) {
                     return $json['autoload'] ?? [];
                 },
                 $jsons
@@ -271,7 +271,7 @@ class ComposerJsonCommand extends Command
 
         $rootJson['autoload-dev'] = $this->combineAutoload(
             array_map(
-                function ($json) {
+                static function ($json) {
                     return $json['autoload-dev'] ?? [];
                 },
                 $jsons
@@ -314,7 +314,7 @@ class ComposerJsonCommand extends Command
             $requires[$packageName] = $this->combineConstraints($constraints, $packageName);
         }
 
-        uksort($requires, function ($a, $b) {
+        uksort($requires, static function ($a, $b) {
             if ('php' === $a) {
                 return -1;
             }
@@ -347,7 +347,7 @@ class ComposerJsonCommand extends Command
     {
         $constraints = array_unique($constraints);
 
-        return array_reduce($constraints, function ($a, $b) use ($name) {
+        return array_reduce($constraints, static function ($a, $b) use ($name) {
             if (null === $a) {
                 return $b;
             }
@@ -440,7 +440,7 @@ class ComposerJsonCommand extends Command
     private function combineManagerPlugins(array $jsons): array
     {
         return array_merge(...array_map(
-            function ($json): array {
+            static function ($json): array {
                 if (!isset($json['extra']['contao-manager-plugin'])) {
                     return [];
                 }
@@ -522,7 +522,7 @@ class ComposerJsonCommand extends Command
         );
 
         $jsons = array_map(
-            function ($json) use ($rootJson) {
+            static function ($json) use ($rootJson) {
                 if (isset($rootJson['extra']['branch-alias'])) {
                     $json['extra']['branch-alias'] = $rootJson['extra']['branch-alias'];
                 } elseif (isset($json['extra']['branch-alias'])) {
@@ -535,7 +535,7 @@ class ComposerJsonCommand extends Command
         );
 
         return array_map(
-            function ($json) {
+            static function ($json) {
                 return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
             },
             $jsons

@@ -126,7 +126,7 @@ class Merger
                     $this->combineTrees($treeByFolder),
                     'Merge the bundles into the '.$branch.' branch.',
                     array_filter(array_map(
-                        function ($commits) use ($branch) {
+                        static function ($commits) use ($branch) {
                             return $commits['branches'][$branch] ?? null;
                         },
                         $mainCommits
