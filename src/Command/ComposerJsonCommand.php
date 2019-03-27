@@ -236,11 +236,14 @@ class ComposerJsonCommand extends Command
         }
 
         $rootJson['conflict'] = $this->combineDependecies(
-            array_map(
-                function ($json) {
-                    return $json['conflict'] ?? [];
-                },
-                $jsons
+            array_merge(
+                array_map(
+                    function ($json) {
+                        return $json['conflict'] ?? [];
+                    },
+                    $jsons
+                ),
+                [$this->config['composer']['conflict'] ?? []]
             ),
             array_keys($rootJson['replace'])
         );
