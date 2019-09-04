@@ -195,6 +195,8 @@ class ComposerJsonCommand extends Command
             )
         );
 
+        ksort($rootJson['replace']);
+
         $rootJson['require'] = $this->combineDependecies(
             array_merge(
                 array_map(
@@ -439,7 +441,7 @@ class ComposerJsonCommand extends Command
 
     private function combineManagerPlugins(array $jsons): array
     {
-        return array_merge(...array_map(
+        $plugins = array_merge(...array_map(
             static function ($json): array {
                 if (!isset($json['extra']['contao-manager-plugin'])) {
                     return [];
@@ -453,6 +455,10 @@ class ComposerJsonCommand extends Command
             },
             array_values($jsons)
         ));
+
+        ksort($plugins);
+
+        return $plugins;
     }
 
     private function combineAutoload(array $autoloadConfigs, array $currentAutoload = null): array
