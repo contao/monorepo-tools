@@ -111,18 +111,19 @@ class ComposerJsonCommand extends Command
 
         $rootJson = $this->getCombinedJson();
         $splitJsons = $this->updateBranchAlias();
+        $basePath= getcwd().'/';
 
         if ($input->getOption('validate')) {
             $jsonPaths = $this->validateJsons($rootJson, $splitJsons);
 
             foreach ($jsonPaths as $path) {
-                $output->writeln('Validated '.$path);
+                $output->writeln('Validated '.str_replace($basePath, '', $path));
             }
         } else {
             $jsonPaths = $this->updateJsons($rootJson, $splitJsons);
 
             foreach ($jsonPaths as $path) {
-                $output->writeln('Updated '.$path);
+                $output->writeln('Updated '.str_replace($basePath, '', $path));
             }
         }
     }
