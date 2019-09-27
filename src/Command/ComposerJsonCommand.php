@@ -262,21 +262,27 @@ class ComposerJsonCommand extends Command
         $rootJson['extra']['contao-manager-plugin'] = $this->combineManagerPlugins($jsons);
 
         $rootJson['autoload'] = $this->combineAutoload(
-            array_map(
-                static function ($json) {
-                    return $json['autoload'] ?? [];
-                },
-                $jsons
+            array_merge(
+                array_map(
+                    static function ($json) {
+                        return $json['autoload'] ?? [];
+                    },
+                    $jsons
+                ),
+                ['' => $this->config['composer']['autoload'] ?? []]
             ),
             $rootJson['autoload'] ?? null
         );
 
         $rootJson['autoload-dev'] = $this->combineAutoload(
-            array_map(
-                static function ($json) {
-                    return $json['autoload-dev'] ?? [];
-                },
-                $jsons
+            array_merge(
+                array_map(
+                    static function ($json) {
+                        return $json['autoload-dev'] ?? [];
+                    },
+                    $jsons
+                ),
+                ['' => $this->config['composer']['autoload-dev'] ?? []]
             ),
             $rootJson['autoload-dev'] ?? null
         );
@@ -474,27 +480,31 @@ class ComposerJsonCommand extends Command
         ;
 
         foreach ($autoloadConfigs as $folder => $autoload) {
+            if ($folder) {
+                $folder .= '/';
+            }
+
             if (isset($autoload['psr-4'])) {
                 foreach ($autoload['psr-4'] as $namespace => $path) {
-                    $returnAutoload['psr-4'][$namespace] = $folder.'/'.$path;
+                    $returnAutoload['psr-4'][$namespace] = $folder.$path;
                 }
             }
 
             if (isset($autoload['classmap'])) {
                 foreach ($autoload['classmap'] as $path) {
-                    $returnAutoload['classmap'][] = $folder.'/'.$path;
+                    $returnAutoload['classmap'][] = $folder.$path;
                 }
             }
 
             if (isset($autoload['exclude-from-classmap'])) {
                 foreach ($autoload['exclude-from-classmap'] as $path) {
-                    $returnAutoload['exclude-from-classmap'][] = $folder.'/'.$path;
+                    $returnAutoload['exclude-from-classmap'][] = $folder.$path;
                 }
             }
 
             if (isset($autoload['files'])) {
                 foreach ($autoload['files'] as $path) {
-                    $returnAutoload['files'][] = $folder.'/'.$path;
+                    $returnAutoload['files'][] = $folder.$path;
                 }
             }
         }
