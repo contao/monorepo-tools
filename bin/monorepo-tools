@@ -2,22 +2,24 @@
 <?php
 
 if (file_exists(__DIR__.'/../vendor/autoload.php')) {
-    $composerDir = dirname(__DIR__).'/vendor';
+    $vendorDir = dirname(__DIR__).'/vendor';
 } else if (file_exists(__DIR__.'/../autoload.php')) {
-    $composerDir = dirname(__DIR__);
+    $vendorDir = dirname(__DIR__);
 } else {
-    $composerDir = dirname(__DIR__, 3);
+    $vendorDir = dirname(__DIR__, 3);
 }
 
-require $composerDir.'/autoload.php';
+require $vendorDir.'/autoload.php';
 
 use Symfony\Component\Console\Application;
 use Contao\MonorepoTools\Command\SplitCommand;
 use Contao\MonorepoTools\Command\MergeCommand;
 use Contao\MonorepoTools\Command\ComposerJsonCommand;
 
+$rootDir = getcwd();
+
 $application = new Application();
-$application->add(new SplitCommand(dirname($composerDir)));
-$application->add(new MergeCommand(dirname($composerDir)));
-$application->add(new ComposerJsonCommand(dirname($composerDir)));
+$application->add(new SplitCommand($rootDir));
+$application->add(new MergeCommand($rootDir));
+$application->add(new ComposerJsonCommand($rootDir));
 $application->run();

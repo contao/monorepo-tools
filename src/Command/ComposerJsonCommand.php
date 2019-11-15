@@ -21,6 +21,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 
 class ComposerJsonCommand extends Command
@@ -47,41 +48,6 @@ class ComposerJsonCommand extends Command
         parent::__construct();
     }
 
-    /**
-     * @return string[]
-     */
-    public function validateJsons(string $rootJson, array $splitJsons): array
-    {
-        $jsonsByPath = array_combine(
-            array_map(
-                function ($folder) {
-                    return $this->rootDir.'/'.$folder.'/composer.json';
-                },
-                array_keys($splitJsons)
-            ),
-            array_values($splitJsons)
-        );
-
-        $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
-
-        $valid = [];
-        $invalid = [];
-
-        foreach ($jsonsByPath as $path => $json) {
-            if (json_decode(file_get_contents($path)) == json_decode($json)) {
-                $valid[] = $path;
-            } else {
-                $invalid[] = $path;
-            }
-        }
-
-        if (\count($invalid)) {
-            throw new RuntimeException(sprintf("composer.json not up to date:\n%s", implode("\n", $invalid)));
-        }
-
-        return $valid;
-    }
-
     protected function configure(): void
     {
         $this
@@ -90,9 +56,9 @@ class ComposerJsonCommand extends Command
                 'validate',
                 null,
                 null,
-                'Validate if the composer.json files are up to date.'
+                'Validate that the composer.json files are up to date'
             )
-            ->setDescription('Merge all composer.json files into the root composer.json file and update the branch alias.')
+            ->setDescription('Merge all composer.json files into the root composer.json file and update the branch alias')
         ;
     }
 
@@ -109,29 +75,47 @@ class ComposerJsonCommand extends Command
             ]
         );
 
+        $io = new SymfonyStyle($input, $output);
         $rootJson = $this->getCombinedJson();
         $splitJsons = $this->updateBranchAlias();
-        $basePath= getcwd().'/';
 
         if ($input->getOption('validate')) {
-            $jsonPaths = $this->validateJsons($rootJson, $splitJsons);
+            $invalid = $this->validateJsons($rootJson, $splitJsons);
 
-            foreach ($jsonPaths as $path) {
-                $output->writeln('Validated '.str_replace($basePath, '', $path));
+            if (0 === \count($invalid)) {
+                $io->success('All composer.json files are up to date.');
+            } else {
+                $files = array_map(
+                    function ($path) {
+                        return str_replace($this->rootDir.'/', '', $path);
+                    },
+                    array_keys($invalid)
+                );
+
+                $io->error('The following files are not up to date: '.implode(',', $files));
             }
         } else {
-            $jsonPaths = $this->updateJsons($rootJson, $splitJsons);
+            $updated = $this->updateJsons($rootJson, $splitJsons);
 
-            foreach ($jsonPaths as $path) {
-                $output->writeln('Updated '.str_replace($basePath, '', $path));
+            if (0 === \count($updated)) {
+                $io->success('All composer.json files are up to date.');
+            } else {
+                $files = array_map(
+                    function ($path) {
+                        return str_replace($this->rootDir.'/', '', $path);
+                    },
+                    array_keys($updated)
+                );
+
+                $io->success('The following files have been updated: '.implode(',', $files));
             }
         }
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string,array>
      */
-    private function updateJsons(string $rootJson, array $splitJsons): array
+    private function validateJsons(string $rootJson, array $splitJsons): array
     {
         $jsonsByPath = array_combine(
             array_map(
@@ -144,14 +128,31 @@ class ComposerJsonCommand extends Command
         );
 
         $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
+        $invalid = [];
 
         foreach ($jsonsByPath as $path => $json) {
+            if (json_decode(file_get_contents($path)) != json_decode($json)) {
+                $invalid[$path] = $json;
+            }
+        }
+
+        return $invalid;
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    private function updateJsons(string $rootJson, array $splitJsons): array
+    {
+        $invalid = $this->validateJsons($rootJson, $splitJsons);
+
+        foreach ($invalid as $path => $json) {
             if (!file_put_contents($path, $json)) {
                 throw new RuntimeException(sprintf('Unable to write to %s', $path));
             }
         }
 
-        return array_keys($jsonsByPath);
+        return $invalid;
     }
 
     private function getCombinedJson(): string

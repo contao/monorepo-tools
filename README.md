@@ -10,5 +10,5 @@ Installation
 ------------
 
 ```sh
-php composer.phar require contao/monorepo-tools
+composer global require contao/monorepo-tools
 ```
