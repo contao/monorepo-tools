@@ -13,6 +13,7 @@
         "php": "^7.1",
         "ext-json": "*",
         "ext-zlib": "*",
+        "composer/semver": "^1.0",
         "symfony/config": "^3.4 || ^4.0",
         "symfony/console": "^3.4 || ^4.0",
         "symfony/filesystem": "^3.4 || ^4.0",
@@ -20,7 +21,6 @@
         "symfony/yaml": "^3.4 || ^4.0"
     },
     "require-dev": {
-        "composer/semver": "^1.0",
         "friendsofphp/php-cs-fixer": "^2.12"
     },
     "autoload": {
