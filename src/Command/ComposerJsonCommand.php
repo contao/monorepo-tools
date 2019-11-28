@@ -93,6 +93,7 @@ class ComposerJsonCommand extends Command
                 );
 
                 $io->error('The following files are not up to date: '.implode(',', $files));
+                $io->writeln('Run this command without the --validate option to apply updates accordingly.');
             }
         } else {
             $updated = $this->updateJsons($rootJson, $splitJsons);
