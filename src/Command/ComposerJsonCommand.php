@@ -62,7 +62,7 @@ class ComposerJsonCommand extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->config = (new Processor())->processConfiguration(
             new MonorepoConfiguration(),
@@ -84,32 +84,40 @@ class ComposerJsonCommand extends Command
 
             if (0 === \count($invalid)) {
                 $io->success('All composer.json files are up to date.');
-            } else {
-                $files = array_map(
-                    function ($path) {
-                        return str_replace($this->rootDir.'/', '', $path);
-                    },
-                    array_keys($invalid)
-                );
 
-                $io->error('The following files are not up to date: '.implode(',', $files));
-            }
-        } else {
-            $updated = $this->updateJsons($rootJson, $splitJsons);
+                return 0;
+            } 
+            
+            $files = array_map(
+                function ($path) {
+                    return str_replace($this->rootDir.'/', '', $path);
+                },
+                array_keys($invalid)
+            );
 
-            if (0 === \count($updated)) {
-                $io->success('All composer.json files are up to date.');
-            } else {
-                $files = array_map(
-                    function ($path) {
-                        return str_replace($this->rootDir.'/', '', $path);
-                    },
-                    array_keys($updated)
-                );
-
-                $io->success('The following files have been updated: '.implode(',', $files));
-            }
+            $io->error('The following files are not up to date: '.implode(',', $files));
+            
+            return 1;
         }
+        
+        $updated = $this->updateJsons($rootJson, $splitJsons);
+
+        if (0 === \count($updated)) {
+            $io->success('All composer.json files are up to date.');
+            
+            return 0;
+        }
+        
+        $files = array_map(
+            function ($path) {
+                return str_replace($this->rootDir.'/', '', $path);
+            },
+            array_keys($updated)
+        );
+
+        $io->success('The following files have been updated: '.implode(',', $files));
+        
+        return 0;
     }
 
     /**
