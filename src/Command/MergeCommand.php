@@ -39,7 +39,7 @@ class MergeCommand extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $merger = new Merger(
             [
@@ -59,5 +59,7 @@ class MergeCommand extends Command
         );
 
         $merger->merge();
+
+        return 0;
     }
 }

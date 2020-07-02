@@ -86,8 +86,8 @@ class ComposerJsonCommand extends Command
                 $io->success('All composer.json files are up to date.');
 
                 return 0;
-            } 
-            
+            }
+
             $files = array_map(
                 function ($path) {
                     return str_replace($this->rootDir.'/', '', $path);
@@ -96,18 +96,18 @@ class ComposerJsonCommand extends Command
             );
 
             $io->error('The following files are not up to date: '.implode(',', $files));
-            
+
             return 1;
         }
-        
+
         $updated = $this->updateJsons($rootJson, $splitJsons);
 
         if (0 === \count($updated)) {
             $io->success('All composer.json files are up to date.');
-            
+
             return 0;
         }
-        
+
         $files = array_map(
             function ($path) {
                 return str_replace($this->rootDir.'/', '', $path);
@@ -116,7 +116,7 @@ class ComposerJsonCommand extends Command
         );
 
         $io->success('The following files have been updated: '.implode(',', $files));
-        
+
         return 0;
     }
 

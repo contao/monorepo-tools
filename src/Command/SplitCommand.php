@@ -61,7 +61,7 @@ class SplitCommand extends Command
         ;
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $config = (new Processor())->processConfiguration(
             new MonorepoConfiguration(),
@@ -89,6 +89,8 @@ class SplitCommand extends Command
         );
 
         $splitter->split();
+
+        return 0;
     }
 
     private function addAuthToken($repoUrl): string
