@@ -37,14 +37,14 @@ class Repository
 
     public function init(): self
     {
-        $this->execute('git --git-dir='.escapeshellarg($this->path).' init --bare '.escapeshellarg($this->path));
+        $this->execute(['git', '--git-dir='.$this->path, 'init', '--bare', $this->path]);
 
         return $this;
     }
 
     public function setConfig(string $key, string $value): self
     {
-        $this->execute('git --git-dir='.escapeshellarg($this->path).' config '.escapeshellarg($key).' '.escapeshellarg($value));
+        $this->execute(['git', '--git-dir='.$this->path, 'config', $key, $value]);
 
         return $this;
     }
@@ -65,10 +65,10 @@ class Repository
 
     public function addRemote(string $name, string $url): self
     {
-        if (\in_array($name, $this->run('git --git-dir='.escapeshellarg($this->path).' remote'), true)) {
-            $this->execute('git --git-dir='.escapeshellarg($this->path).' remote set-url '.escapeshellarg($name).' '.escapeshellarg($url));
+        if (\in_array($name, $this->run(['git', '--git-dir='.$this->path, 'remote']), true)) {
+            $this->execute(['git', '--git-dir='.$this->path, 'remote', 'set-url', $name, $url]);
         } else {
-            $this->execute('git --git-dir='.escapeshellarg($this->path).' remote add '.escapeshellarg($name).' '.escapeshellarg($url));
+            $this->execute(['git', '--git-dir='.$this->path, 'remote', 'add', $name, $url]);
         }
 
         return $this;
@@ -76,14 +76,14 @@ class Repository
 
     public function removeRemote(string $name): self
     {
-        $this->execute('git --git-dir='.escapeshellarg($this->path).' remote rm '.escapeshellarg($name));
+        $this->execute(['git', '--git-dir='.$this->path, 'remote', 'rm', $name]);
 
         return $this;
     }
 
     public function fetch(string $remote): self
     {
-        $this->execute('git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote));
+        $this->execute(['git', '--git-dir='.$this->path, 'fetch', '--no-tags', $remote]);
 
         return $this;
     }
@@ -93,7 +93,7 @@ class Repository
         $this->executeConcurrent(
             array_map(
                 function ($remote) {
-                    return 'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote);
+                    return ['git', '--git-dir='.$this->path, 'fetch', '--no-tags', $remote];
                 },
                 $remotes
             )
@@ -104,20 +104,26 @@ class Repository
 
     public function fetchTags(string $remote, string $prefix): self
     {
-        $this->execute(
-            'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote).' '
-            .escapeshellarg('+refs/tags/*:refs/tags/'.$prefix.'*')
-        );
+        $this->execute([
+            'git',
+            '--git-dir='.$this->path,
+            'fetch',
+            '--no-tags',
+            $remote,
+            '+refs/tags/*:refs/tags/'.$prefix.'*'
+        ]);
 
         return $this;
     }
 
     public function fetchTag(string $tag, string $remote, string $prefix): self
     {
-        $this->execute(
-            'git --git-dir='.escapeshellarg($this->path).' fetch --no-tags '.escapeshellarg($remote).' '
-            .escapeshellarg('+refs/tags/'.$tag.':refs/tags/'.$prefix.$tag)
-        );
+        $this->execute([
+            'git',
+            '--git-dir='.$this->path,
+            'fetch --no-tags '.$remote,
+            '+refs/tags/'.$tag.':refs/tags/'.$prefix.$tag
+        ]);
 
         return $this;
     }
@@ -129,7 +135,7 @@ class Repository
     {
         $branches = [];
 
-        foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' branch -r') as $branch) {
+        foreach ($this->run(['git', '--git-dir='.$this->path, 'branch', '-r']) as $branch) {
             $branch = trim($branch);
 
             if ('' === $branch || 0 !== strncmp($branch, $remote.'/', \strlen($remote.'/'))) {
@@ -137,7 +143,7 @@ class Repository
             }
 
             $branch = substr($branch, \strlen($remote.'/'));
-            $branches[$branch] = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-parse '.escapeshellarg($remote.'/'.$branch))[0];
+            $branches[$branch] = $this->run(['git', '--git-dir='.$this->path, 'rev-parse', $remote.'/'.$branch])[0];
         }
 
         return $branches;
@@ -150,13 +156,13 @@ class Repository
     {
         $tags = [];
 
-        foreach ($this->run('git --git-dir='.escapeshellarg($this->path).' tag -l '.escapeshellarg($prefix.'*')) as $tag) {
+        foreach ($this->run(['git', '--git-dir='.$this->path, 'tag', '-l', $prefix.'*']) as $tag) {
             if ('' === $tag) {
                 continue;
             }
 
             $tag = substr(trim($tag), \strlen($prefix));
-            $tags[$tag] = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-list -n 1 '.escapeshellarg($prefix.$tag))[0];
+            $tags[$tag] = $this->run(['git', '--git-dir='.$this->path, 'rev-list', '-n', '1', $prefix.$tag])[0];
         }
 
         return $tags;
@@ -164,7 +170,7 @@ class Repository
 
     public function getTag(string $tag): string
     {
-        $result = $this->run('git --git-dir='.escapeshellarg($this->path).' rev-list -n 1 '.escapeshellarg($tag));
+        $result = $this->run(['git', '--git-dir='.$this->path, 'rev-list', '-n', '1', $tag]);
 
         if (!\count($result) || 40 !== \strlen($result[0])) {
             throw new \RuntimeException(sprintf('Tag %s not found.', $tag));
@@ -175,31 +181,31 @@ class Repository
 
     public function addTag(string $name, string $hash): self
     {
-        $this->execute('git --git-dir='.escapeshellarg($this->path).' tag '.escapeshellarg($name).' '.escapeshellarg($hash));
+        $this->execute(['git', '--git-dir='.$this->path, 'tag', $name, $hash]);
 
         return $this;
     }
 
     public function removeTag(string $name): self
     {
-        $this->execute('git --git-dir='.escapeshellarg($this->path).' tag -d '.escapeshellarg($name));
+        $this->execute(['git', '--git-dir='.$this->path, 'tag', '-d', $name]);
 
         return $this;
     }
 
     public function getCommit(string $hash): Commit
     {
-        return new Commit(implode("\n", $this->run('git --git-dir='.escapeshellarg($this->path).' cat-file commit '.escapeshellarg($hash))));
+        return new Commit(implode("\n", $this->run(['git', '--git-dir='.$this->path, 'cat-file', 'commit', $hash])));
     }
 
     public function getTree(string $hash): Tree
     {
-        return new Tree(implode("\n", $this->run('git --git-dir='.escapeshellarg($this->path).' cat-file tree '.escapeshellarg($hash))));
+        return new Tree(implode("\n", $this->run(['git', '--git-dir='.$this->path, 'cat-file', 'tree', $hash])));
     }
 
     public function commitTree(string $treeHash, string $message, array $parents = [], bool $copyDateFromParents = false): string
     {
-        $prefix = '';
+        $command = [];
 
         if ($copyDateFromParents) {
             $date = null;
@@ -213,20 +219,24 @@ class Repository
             }
 
             if ($date) {
-                $prefix =
-                    'GIT_AUTHOR_DATE='.escapeshellarg($date->format('U O'))
-                    .' GIT_COMMITTER_DATE='.escapeshellarg($date->format('U O')).' '
-                ;
+                $command[] = 'GIT_AUTHOR_DATE='.$date->format('U O');
+                $command[] = 'GIT_COMMITTER_DATE='.$date->format('U O');
             }
         }
 
-        return $this->run(
-            $prefix
-            .'git --git-dir='.escapeshellarg($this->path).' commit-tree'
-            .' -p '.implode(' -p ', array_map('escapeshellarg', $parents))
-            .' -m '.escapeshellarg($message)
-            .' '.$treeHash
-        )[0];
+        $command = array_merge($command, ['git', '--git-dir='.$this->path, 'commit-tree']);
+
+        foreach ($parents as $parent) {
+            $command[] = '-p';
+            $command[] = $parent;
+        }
+
+        $command[] = '-m';
+        $command[] = $message;
+
+        $command[] = $treeHash;
+
+        return $this->run($command)[0];
     }
 
     public function addBranch(string $name, string $hash): self
@@ -304,13 +314,14 @@ class Repository
 
     private function pushRefspec(string $refspec, string $remote, bool $force): void
     {
-        $command = 'git --git-dir='.escapeshellarg($this->path).' push';
+        $command = ['git', '--git-dir='.$this->path, 'push'];
 
         if ($force) {
-            $command .= ' --force';
+            $command[] = '--force';
         }
 
-        $command .= ' '.escapeshellarg($remote).' '.escapeshellarg($refspec);
+        $command[] = $remote;
+        $command[] = $refspec;
 
         $this->execute($command);
     }
@@ -320,13 +331,14 @@ class Repository
         $this->executeConcurrent(
             array_map(
                 function ($refspecRemote) use ($force) {
-                    $command = 'git --git-dir='.escapeshellarg($this->path).' push';
+                    $command = ['git', '--git-dir='.$this->path, 'push'];
 
                     if ($force) {
-                        $command .= ' --force';
+                        $command[] = '--force';
                     }
 
-                    $command .= ' '.escapeshellarg($refspecRemote[1]).' '.escapeshellarg($refspecRemote[0]);
+                    $command[] = $refspecRemote[1];
+                    $command[] = $refspecRemote[0];
 
                     return $command;
                 },
@@ -335,14 +347,14 @@ class Repository
         );
     }
 
-    private function run($command, $exitOnFailure = true): array
+    private function run(array $command, $exitOnFailure = true): array
     {
         // Move the cursor to the beginning of the line
         $this->output->write("\x0D");
 
         // Erase the line
         $this->output->write("\x1B[2K");
-        $this->output->write($command);
+        $this->output->write(implode(' ', $command));
 
         $process = new Process($command);
         $process->run();
@@ -354,9 +366,9 @@ class Repository
         return explode("\n", $process->getOutput());
     }
 
-    private function execute($command, $exitOnFailure = true): void
+    private function execute(array $command, $exitOnFailure = true): void
     {
-        $this->output->writeln('   $ '.$command);
+        $this->output->writeln('   $ '.implode(' ', $command));
 
         $process = new Process($command);
         $process->setTimeout(600);
@@ -373,12 +385,12 @@ class Repository
         }
     }
 
-    private function executeConcurrent($commands, $exitOnFailure = true): void
+    private function executeConcurrent(array $commands, $exitOnFailure = true): void
     {
         $processes = [];
 
         foreach ($commands as $command) {
-            $this->output->writeln('   $ '.$command);
+            $this->output->writeln('   $ '.implode(' ', $command));
 
             $process = new Process($command);
             $processes[] = $process;
