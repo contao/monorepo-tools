@@ -19,8 +19,8 @@ class MonorepoConfiguration implements ConfigurationInterface
 {
     public function getConfigTreeBuilder(): TreeBuilder
     {
-        $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('monorepo');
+        $treeBuilder = new TreeBuilder('monorepo');
+        $rootNode = $treeBuilder->getRootNode();
 
         $rootNode
             ->children()
