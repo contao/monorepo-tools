@@ -121,7 +121,9 @@ class Repository
         $this->execute([
             'git',
             '--git-dir='.$this->path,
-            'fetch --no-tags '.$remote,
+            'fetch',
+            '--no-tags',
+            $remote,
             '+refs/tags/'.$tag.':refs/tags/'.$prefix.$tag
         ]);
 
