@@ -170,6 +170,11 @@ class ComposerJsonCommand extends Command
         if (file_exists($this->rootDir.'/vendor/composer/installed.json')) {
             $installedJson = json_decode(file_get_contents($this->rootDir.'/vendor/composer/installed.json'), true);
 
+            // Composer v2
+            if (isset($installedJson['packages'])) {
+                $installedJson = $installedJson['packages'];
+            }
+
             foreach ($installedJson as $package) {
                 if (isset($package['replace'])) {
                     $this->replacedPackages[$package['name']] = $package['replace'];
