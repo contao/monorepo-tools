@@ -225,6 +225,33 @@ class ComposerJsonCommand extends Command
             array_keys($rootJson['replace'])
         );
 
+        $rootJson['require-dev'] = $this->combineDependecies(
+            array_merge(
+                array_map(
+                    static function ($json) {
+                        return $json['require-dev'] ?? [];
+                    },
+                    $jsons
+                ),
+                [$this->config['composer']['require-dev'] ?? []]
+            ),
+            array_keys($rootJson['replace'])
+        );
+
+        foreach ($rootJson['require'] as $packageName => $versionConstraint) {
+            if (isset($rootJson['require-dev'][$packageName])) {
+                $rootJson['require'][$packageName] = $this->combineConstraints(
+                    [
+                        $rootJson['require-dev'][$packageName],
+                        $versionConstraint,
+                    ],
+                    $packageName
+                );
+
+                unset($rootJson['require-dev'][$packageName]);
+            }
+        }
+
         $rootJson['conflict'] = $this->combineDependecies(
             array_merge(
                 array_map(
