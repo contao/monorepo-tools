@@ -97,6 +97,13 @@ class ComposerJsonCommand extends Command
 
             $io->error('The following files are not up to date: '.implode(',', $files));
 
+            foreach ($invalid as $path => $newJson) {
+                $a = explode("\n", file_get_contents($path));
+                $b = explode("\n", $newJson);
+                $io->writeln($path);
+                $io->writeln((new \Diff($a, $b))->render(new \Diff_Renderer_Text_Unified()));
+            }
+
             return 1;
         }
 
