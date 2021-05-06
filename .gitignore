@@ -1,3 +1,4 @@
 /.monorepo-split-cache/
 /.monorepo-merge-cache/
 /vendor/
+/.phpunit.result.cache

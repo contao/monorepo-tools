@@ -31,7 +31,7 @@ class Tree extends GitObject
             $nextSpace = strpos($rawTree, ' ', $offset);
             $nextNull = strpos($rawTree, "\0", $offset);
 
-            if (false === $nextSpace || false === $nextNull || $nextSpace > $nextNull) {
+            if (false === $nextSpace || false === $nextNull || $nextSpace > $nextNull || $nextNull + 20 >= $length) {
                 throw new \RuntimeException('Invalid tree object.');
             }
 
