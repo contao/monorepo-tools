@@ -309,6 +309,13 @@ class ComposerJsonCommand extends Command
             $rootJson['autoload-dev'] ?? null
         );
 
+        // Remove empty arrays
+        foreach ($rootJson as $key => $value) {
+            if (\is_array($value) && 0 === \count($value)) {
+                unset($rootJson[$key]);
+            }
+        }
+
         return json_encode($rootJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
     }
 
