@@ -253,6 +253,7 @@ class Splitter
     private function splitCommits(array $commitObjects, array $subRepos): array
     {
         $hashMapping = [];
+        $emptyCommits = [];
 
         foreach ($subRepos as $subRepo => $config) {
             $hashMapping[$subRepo] = $config['mapping'];
@@ -263,6 +264,10 @@ class Splitter
         while (\count($pending)) {
             $current = array_pop($pending);
 
+            if (isset($emptyCommits[$current])) {
+                continue;
+            }
+
             foreach ($subRepos as $subRepo => $config) {
                 if (isset($hashMapping[$subRepo][$current])) {
                     continue 2;
@@ -272,6 +277,10 @@ class Splitter
             $missingParents = [];
 
             foreach ($commitObjects[$current]->getParentHashes() as $parent) {
+                if (isset($emptyCommits[$parent])) {
+                    continue;
+                }
+
                 foreach ($subRepos as $subRepo => $config) {
                     if (isset($hashMapping[$subRepo][$parent])) {
                         continue 2;
@@ -291,16 +300,23 @@ class Splitter
                 continue;
             }
 
-            $this->splitCommit($current, $commitObjects[$current]->getTreeHash(), $hashMapping, $subRepos);
+            $commitIsEmpty = !$this->splitCommit($current, $commitObjects[$current]->getTreeHash(), $hashMapping, $subRepos);
+
+            if ($commitIsEmpty) {
+                $emptyCommits[$current] = true;
+            }
         }
 
         return $hashMapping;
     }
 
-    private function splitCommit($commitHash, $treeHash, &$hashMapping, array $subRepos): void
+    /**
+     * @return bool True if at least one split commit was created successfully
+     */
+    private function splitCommit($commitHash, $treeHash, &$hashMapping, array $subRepos): bool
     {
         $treeObject = $this->getTreeObject($treeHash);
-        $failure = true;
+        $success = false;
 
         foreach ($subRepos as $subRepo => $config) {
             $subTreeHash = $treeObject->getSubtreeHash($subRepo);
@@ -314,12 +330,10 @@ class Splitter
             }
 
             $hashMapping[$subRepo][$commitHash] = $this->createNewCommit($commitHash, $subTreeHash, $hashMapping[$subRepo]);
-            $failure = false;
+            $success = true;
         }
 
-        if ($failure) {
-            throw new \RuntimeException(sprintf('No subfolder found in commit %s. %s', $commitHash, print_r($treeObject, true)));
-        }
+        return $success;
     }
 
     private function createNewCommit(string $commitHash, string $treeHash, &$hashMapping): string
