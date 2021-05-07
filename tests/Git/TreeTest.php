@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
@@ -18,13 +18,13 @@ use PHPUnit\Framework\TestCase;
 
 class TreeTest extends TestCase
 {
-    public function testInstantiation()
+    public function testInstantiation(): void
     {
         $tree = new Tree('');
         $this->assertInstanceOf(GitObject::class, $tree);
     }
 
-    public function testGetHash()
+    public function testGetHash(): void
     {
         $tree = new Tree('');
         $this->assertSame('4b825dc642cb6eb9a060e54bf8d69288fbee4904', $tree->getHash());
@@ -33,7 +33,7 @@ class TreeTest extends TestCase
         $this->assertSame('04d900f201d971b8413abc9cb3ca2bce63cf88e0', $tree->getHash());
     }
 
-    public function testGetSubtreeHash()
+    public function testGetSubtreeHash(): void
     {
         $randomTree = random_bytes(20);
 
@@ -46,7 +46,7 @@ class TreeTest extends TestCase
         $this->assertSame(bin2hex($randomTree), $tree->getSubtreeHash('bar'));
     }
 
-    public function testCreateFromTrees()
+    public function testCreateFromTrees(): void
     {
         $tree = Tree::createFromTrees([
             new Tree("40000 foo\0".hex2bin('4b825dc642cb6eb9a060e54bf8d69288fbee4904')),
@@ -60,7 +60,7 @@ class TreeTest extends TestCase
     /**
      * @dataProvider getInvalidTrees
      */
-    public function testInvalidTrees(string $rawTree)
+    public function testInvalidTrees(string $rawTree): void
     {
         $this->expectExceptionMessage('Invalid tree object.');
 
@@ -71,8 +71,8 @@ class TreeTest extends TestCase
     {
         yield [' '];
         yield ['invalid'];
-        yield ["123 foo\0"."0123456789012345678"];
-        yield ["123foo\0"."01234567890123456789"];
-        yield ["123 foo"."01234567890123456789"];
+        yield ["123 foo\0".'0123456789012345678'];
+        yield ["123foo\0".'01234567890123456789'];
+        yield ['123 foo'.'01234567890123456789'];
     }
 }

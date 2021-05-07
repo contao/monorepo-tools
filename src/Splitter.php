@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
@@ -134,12 +134,7 @@ class Splitter
                 $splitTreeHash = $this->getCommitObject($splitHash)->getTreeHash();
 
                 if ($monoTreeHash !== $splitTreeHash) {
-                    throw new \RuntimeException(sprintf(
-                        'Invalid mapping from %s to %s. Tree for folder %s does not match.',
-                        $monoHash,
-                        $splitHash,
-                        $subFolder
-                    ));
+                    throw new \RuntimeException(sprintf('Invalid mapping from %s to %s. Tree for folder %s does not match.', $monoHash, $splitHash, $subFolder));
                 }
             }
         }
@@ -164,18 +159,14 @@ class Splitter
                         ->getTag('remote/mono/'.$this->branchOrTag)
                     ;
                 } catch (\Exception $e) {
-                    throw new InvalidArgumentException(sprintf(
-                        'Branch or tag %s does not exist, use one of %s',
-                        $this->branchOrTag,
-                        implode(', ', array_keys($branchCommits))
-                    ));
+                    throw new InvalidArgumentException(sprintf('Branch or tag %s does not exist, use one of %s', $this->branchOrTag, implode(', ', array_keys($branchCommits))));
                 }
 
                 $tagCommits = [$this->branchOrTag => $tagHash];
                 $branchCommits = [];
             }
         } else {
-            foreach ($branchCommits as $branch => $commitHash) {
+            foreach (array_keys($branchCommits) as $branch) {
                 if (!preg_match($this->branchFilter, $branch)) {
                     unset($branchCommits[$branch]);
                 }
@@ -191,11 +182,7 @@ class Splitter
         $commitObjects = $this->readCommits(array_merge(array_values($branchCommits), array_values($tagCommits)));
 
         if (empty($commitObjects)) {
-            throw new \RuntimeException(sprintf(
-                'No commits found for: %s %s',
-                print_r($branchCommits, true),
-                print_r($tagCommits, true)
-            ));
+            throw new \RuntimeException(sprintf('No commits found for: %s %s', print_r($branchCommits, true), print_r($tagCommits, true)));
         }
 
         $this->output->writeln("\nSplit commits...");
@@ -213,7 +200,7 @@ class Splitter
             $this->output->writeln("\nCreate branches...");
 
             foreach ($branchCommits as $branch => $commit) {
-                foreach ($this->repoUrlsByFolder as $subRepo => $config) {
+                foreach (array_keys($this->repoUrlsByFolder) as $subRepo) {
                     if (isset($hashMapping[$subRepo][$commit])) {
                         $this->repository->addBranch($subRepo.'/'.$branch, $hashMapping[$subRepo][$commit]);
                         $pushBranches[] = [$subRepo.'/'.$branch, $subRepo, $branch];
@@ -226,7 +213,7 @@ class Splitter
             $this->output->writeln("\nCreate tags...");
 
             foreach ($tagCommits as $tag => $commit) {
-                foreach ($this->repoUrlsByFolder as $subRepo => $config) {
+                foreach (array_keys($this->repoUrlsByFolder) as $subRepo) {
                     if (isset($hashMapping[$subRepo][$commit])) {
                         $this->repository->addTag('remote/'.$subRepo.'/'.$tag, $hashMapping[$subRepo][$commit]);
                         $pushTags[] = ['remote/'.$subRepo.'/'.$tag, $subRepo, $tag];
@@ -268,7 +255,7 @@ class Splitter
                 continue;
             }
 
-            foreach ($subRepos as $subRepo => $config) {
+            foreach (array_keys($subRepos) as $subRepo) {
                 if (isset($hashMapping[$subRepo][$current])) {
                     continue 2;
                 }
@@ -281,7 +268,7 @@ class Splitter
                     continue;
                 }
 
-                foreach ($subRepos as $subRepo => $config) {
+                foreach (array_keys($subRepos) as $subRepo) {
                     if (isset($hashMapping[$subRepo][$parent])) {
                         continue 2;
                     }
@@ -318,7 +305,7 @@ class Splitter
         $treeObject = $this->getTreeObject($treeHash);
         $success = false;
 
-        foreach ($subRepos as $subRepo => $config) {
+        foreach (array_keys($subRepos) as $subRepo) {
             $subTreeHash = $treeObject->getSubtreeHash($subRepo);
 
             if (!$subTreeHash) {

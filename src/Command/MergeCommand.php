@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */

@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
@@ -52,12 +52,7 @@ class ComposerJsonCommand extends Command
     {
         $this
             ->setName('composer-json')
-            ->addOption(
-                'validate',
-                null,
-                null,
-                'Validate that the composer.json files are up to date'
-            )
+            ->addOption('validate', null, null, 'Validate that the composer.json files are up to date')
             ->setDescription('Merge all composer.json files into the root composer.json file and update the branch alias')
         ;
     }
@@ -339,7 +334,7 @@ class ComposerJsonCommand extends Command
                 continue;
             }
 
-            foreach ($this->replacedPackages[$packageName] as $replacedPackageName => $versionConstraint) {
+            foreach (array_keys($this->replacedPackages[$packageName]) as $replacedPackageName) {
                 if (isset($requires[$replacedPackageName])) {
                     $requires[$packageName] = array_merge($requires[$packageName], $requires[$replacedPackageName]);
                     unset($requires[$replacedPackageName]);
@@ -351,31 +346,34 @@ class ComposerJsonCommand extends Command
             $requires[$packageName] = $this->combineConstraints($constraints, $packageName);
         }
 
-        uksort($requires, static function ($a, $b) {
-            if ('php' === $a) {
-                return -1;
-            }
+        uksort(
+            $requires,
+            static function ($a, $b) {
+                if ('php' === $a) {
+                    return -1;
+                }
 
-            if ('php' === $b) {
-                return 1;
-            }
+                if ('php' === $b) {
+                    return 1;
+                }
 
-            if (
-                (0 === strncmp($a, 'ext-', 4) && 0 !== strncmp($b, 'ext-', 4))
-                || (0 === strncmp($a, 'lib-', 4) && 0 !== strncmp($b, 'lib-', 4))
-            ) {
-                return -1;
-            }
+                if (
+                    (0 === strncmp($a, 'ext-', 4) && 0 !== strncmp($b, 'ext-', 4))
+                    || (0 === strncmp($a, 'lib-', 4) && 0 !== strncmp($b, 'lib-', 4))
+                ) {
+                    return -1;
+                }
 
-            if (
-                (0 !== strncmp($a, 'ext-', 4) && 0 === strncmp($b, 'ext-', 4))
-                || (0 !== strncmp($a, 'lib-', 4) && 0 === strncmp($b, 'lib-', 4))
-            ) {
-                return 1;
-            }
+                if (
+                    (0 !== strncmp($a, 'ext-', 4) && 0 === strncmp($b, 'ext-', 4))
+                    || (0 !== strncmp($a, 'lib-', 4) && 0 === strncmp($b, 'lib-', 4))
+                ) {
+                    return 1;
+                }
 
-            return strcmp($a, $b);
-        });
+                return strcmp($a, $b);
+            }
+        );
 
         return $requires;
     }
@@ -384,81 +382,74 @@ class ComposerJsonCommand extends Command
     {
         $constraints = array_unique($constraints);
 
-        return array_reduce($constraints, static function ($a, $b) use ($name) {
-            if (null === $a) {
-                return $b;
-            }
-
-            $versionParser = new VersionParser();
-            $constraintA = $versionParser->parseConstraints($a);
-            $constraintB = $versionParser->parseConstraints($b);
-
-            if (!$constraintA->matches($constraintB)) {
-                throw new RuntimeException(sprintf(
-                    'Unable to combine version constraint "%s" with "%s" for %s.',
-                    $a,
-                    $b,
-                    $name
-                ));
-            }
-
-            $aParts = preg_split('/\s*\|\|?\s*/', trim($a));
-            $bParts = preg_split('/\s*\|\|?\s*/', trim($b));
-
-            foreach ($aParts as $aKey => $aPart) {
-                if (!$versionParser->parseConstraints($aPart)->matches($constraintB)) {
-                    unset($aParts[$aKey]);
+        return array_reduce(
+            $constraints,
+            static function ($a, $b) use ($name) {
+                if (null === $a) {
+                    return $b;
                 }
-            }
 
-            foreach ($bParts as $bKey => $bPart) {
-                if (!$versionParser->parseConstraints($bPart)->matches($constraintA)) {
-                    unset($bParts[$bKey]);
+                $versionParser = new VersionParser();
+                $constraintA = $versionParser->parseConstraints($a);
+                $constraintB = $versionParser->parseConstraints($b);
+
+                if (!$constraintA->matches($constraintB)) {
+                    throw new RuntimeException(sprintf('Unable to combine version constraint "%s" with "%s" for %s.', $a, $b, $name));
                 }
-            }
 
-            foreach ($aParts as $aKey => $aPart) {
-                foreach ($bParts as $bKey => $bPart) {
-                    if (!$versionParser->parseConstraints($aPart)->matches($versionParser->parseConstraints($bPart))) {
-                        continue;
-                    }
+                $aParts = preg_split('/\s*\|\|?\s*/', trim($a));
+                $bParts = preg_split('/\s*\|\|?\s*/', trim($b));
 
-                    if ($aPart === $bPart) {
+                foreach ($aParts as $aKey => $aPart) {
+                    if (!$versionParser->parseConstraints($aPart)->matches($constraintB)) {
                         unset($aParts[$aKey]);
-                        continue 2;
                     }
+                }
 
-                    if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
-                        if (Comparator::greaterThan(substr($aPart, 1), substr($bPart, 1))) {
+                foreach ($bParts as $bKey => $bPart) {
+                    if (!$versionParser->parseConstraints($bPart)->matches($constraintA)) {
+                        unset($bParts[$bKey]);
+                    }
+                }
+
+                foreach ($aParts as $aKey => $aPart) {
+                    foreach ($bParts as $bKey => $bPart) {
+                        if (!$versionParser->parseConstraints($aPart)->matches($versionParser->parseConstraints($bPart))) {
+                            continue;
+                        }
+
+                        if ($aPart === $bPart) {
+                            unset($aParts[$aKey]);
+                            continue 2;
+                        }
+
+                        if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
+                            if (Comparator::greaterThan(substr($aPart, 1), substr($bPart, 1))) {
+                                unset($bParts[$bKey]);
+                                continue;
+                            }
+
+                            unset($aParts[$aKey]);
+                            continue 2;
+                        }
+
+                        if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^[0-9\.]+\.\*$/', $bPart)) {
+                            unset($aParts[$aKey]);
+                            continue 2;
+                        }
+
+                        if (preg_match('/^[0-9\.]+\.\*$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
                             unset($bParts[$bKey]);
                             continue;
                         }
 
-                        unset($aParts[$aKey]);
-                        continue 2;
+                        throw new RuntimeException(sprintf('Constraint like "%s" with "%s" for %s are currently not supported.', $a, $b, $name));
                     }
-
-                    if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^[0-9\.]+\.\*$/', $bPart)) {
-                        unset($aParts[$aKey]);
-                        continue 2;
-                    }
-
-                    if (preg_match('/^[0-9\.]+\.\*$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
-                        unset($bParts[$bKey]);
-                        continue;
-                    }
-
-                    throw new RuntimeException(sprintf(
-                        'Constraint like "%s" with "%s" for %s are currently not supported.',
-                        $a,
-                        $b,
-                        $name
-                    ));
                 }
-            }
 
-            return trim(implode(' || ', $aParts).' || '.implode(' || ', $bParts), ' |');
-        });
+                return trim(implode(' || ', $aParts).' || '.implode(' || ', $bParts), ' |');
+            }
+        );
     }
 
     private function combineBins(array $binaryPaths): array

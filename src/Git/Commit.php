@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
@@ -47,7 +47,7 @@ class Commit extends GitObject
     }
 
     /**
-     * @return string[]
+     * @return array<string>
      */
     public function getParentHashes(): array
     {
@@ -91,7 +91,7 @@ class Commit extends GitObject
     {
         $raw = explode("\n", $this->getRaw());
 
-        foreach ($raw as $num => $line) {
+        foreach ($raw as $line) {
             if ('' === $line) {
                 break;
             }
