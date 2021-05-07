@@ -33,7 +33,7 @@ class ComposerJsonCommand extends Command
     private $rootDir;
 
     /**
-     * @var ConfigurationInterface
+     * @var array
      */
     private $config;
 
@@ -124,7 +124,7 @@ class ComposerJsonCommand extends Command
     }
 
     /**
-     * @return array<string,array>
+     * @return array<string,string>
      */
     private function validateJsons(string $rootJson, array $splitJsons): array
     {

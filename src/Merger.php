@@ -119,7 +119,7 @@ class Merger
             }
         }
 
-        foreach ($trees['branches'] as $branch => $treeByFolder) {
+        foreach ($trees['branches'] ?? [] as $branch => $treeByFolder) {
             $this->repository->addBranch(
                 $branch,
                 $this->repository->commitTree(
@@ -135,7 +135,7 @@ class Merger
             );
         }
 
-        foreach ($trees['tags'] as $tag => $treeByFolder) {
+        foreach ($trees['tags'] ?? [] as $tag => $treeByFolder) {
             $this->repository->addTag(
                 $tag,
                 $this->repository->commitTree(

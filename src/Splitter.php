@@ -235,7 +235,7 @@ class Splitter
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string,array<string,string>>
      */
     private function splitCommits(array $commitObjects, array $subRepos): array
     {
@@ -352,7 +352,7 @@ class Splitter
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string,Commit>
      */
     private function readCommits(array $baseCommits): array
     {
