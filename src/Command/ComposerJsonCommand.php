@@ -20,6 +20,7 @@ use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
@@ -52,7 +53,7 @@ class ComposerJsonCommand extends Command
     {
         $this
             ->setName('composer-json')
-            ->addOption('validate', null, null, 'Validate that the composer.json files are up to date')
+            ->addOption('validate', null, InputOption::VALUE_NONE, 'Validate that the composer.json files are up to date')
             ->setDescription('Merge all composer.json files into the root composer.json file and update the branch alias')
         ;
     }
