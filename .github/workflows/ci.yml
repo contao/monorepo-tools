@@ -59,11 +59,11 @@ jobs:
               run: composer install --no-interaction --no-suggest
 
             - name: Check the coding style
-              run: vendor/bin/ecs check src tests --config vendor/contao/easy-coding-standard/config/default.php --no-progress-bar --ansi
+              run: vendor/bin/ecs check src tests --config ecs.php --no-progress-bar --ansi
 
             - name: Analyze the code
               run: |
-                  vendor/bin/phpstan analyse src tests --level=6 --no-progress
+                  vendor/bin/phpstan analyse src tests --level=5 --no-progress
                   vendor/bin/psalm --no-suggestions --threads=4 --no-progress
 
     tests:
