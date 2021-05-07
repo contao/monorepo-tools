@@ -15,7 +15,6 @@ namespace Contao\MonorepoTools\Command;
 use Composer\Semver\Comparator;
 use Composer\Semver\VersionParser;
 use Contao\MonorepoTools\Config\MonorepoConfiguration;
-use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\RuntimeException;
@@ -142,12 +141,34 @@ class ComposerJsonCommand extends Command
         $invalid = [];
 
         foreach ($jsonsByPath as $path => $json) {
-            if (json_decode(file_get_contents($path)) != json_decode($json)) {
+            if ($this->sortedJsonDecode(file_get_contents($path)) !== $this->sortedJsonDecode($json)) {
                 $invalid[$path] = $json;
             }
         }
 
         return $invalid;
+    }
+
+    private function sortedJsonDecode(string $jsonString): array
+    {
+        $json = json_decode($jsonString, true);
+
+        $this->kSortArrayRecursive($json);
+
+        return $json;
+    }
+
+    private function kSortArrayRecursive(&$array): void
+    {
+        if (!\is_array($array)) {
+            return;
+        }
+
+        ksort($array);
+
+        foreach ($array as &$value) {
+            $this->kSortArrayRecursive($value);
+        }
     }
 
     /**
