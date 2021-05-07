@@ -1,4 +1,5 @@
 /.monorepo-split-cache/
 /.monorepo-merge-cache/
 /vendor/
+/composer.lock
 /.phpunit.result.cache
