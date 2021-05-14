@@ -64,11 +64,14 @@ class Commit extends GitObject
             if (0 === strncmp($line, 'committer ', 10)) {
                 $parts = explode(' ', $line);
 
-                return \DateTime::createFromFormat(
+                $date = \DateTime::createFromFormat(
                     'U',
-                    $parts[\count($parts) - 2],
-                    new \DateTimeZone($parts[\count($parts) - 1])
+                    $parts[\count($parts) - 2]
                 );
+
+                $date->setTimezone(new \DateTimeZone($parts[\count($parts) - 1]));
+
+                return $date;
             }
         }
 
