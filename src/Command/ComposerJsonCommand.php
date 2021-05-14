@@ -391,7 +391,7 @@ class ComposerJsonCommand extends Command
             $parsedConstraints[] = $versionParser->parseConstraints($constraint);
         }
 
-        return (string) Intervals::compactConstraint(new MultiConstraint($parsedConstraints));
+        return (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints));
     }
 
     private function combineBins(array $binaryPaths): array
