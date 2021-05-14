@@ -390,8 +390,10 @@ class ComposerJsonCommand extends Command
         foreach ($constraints as $constraint) {
             $parsedConstraints[] = $versionParser->parseConstraints($constraint);
         }
+        
+        $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints));
 
-        return (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints));
+        return str_replace(['[', ']'], '', $compact);
     }
 
     private function combineBins(array $binaryPaths): array
