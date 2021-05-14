@@ -13,6 +13,8 @@ declare(strict_types=1);
 namespace Contao\MonorepoTools\Command;
 
 use Composer\Semver\Comparator;
+use Composer\Semver\Constraint\MultiConstraint;
+use Composer\Semver\Intervals;
 use Composer\Semver\VersionParser;
 use Contao\MonorepoTools\Config\MonorepoConfiguration;
 use Symfony\Component\Config\Definition\Processor;
@@ -402,76 +404,16 @@ class ComposerJsonCommand extends Command
 
     private function combineConstraints(array $constraints, string $name): string
     {
-        $constraints = array_unique($constraints);
+        $parsedConstraints = [];
+        $versionParser = new VersionParser();
 
-        return array_reduce(
-            $constraints,
-            static function ($a, $b) use ($name) {
-                if (null === $a) {
-                    return $b;
-                }
+        foreach ($constraints as $constraint) {
+            $parsedConstraints[] = $versionParser->parseConstraints($constraint);
+        }
+        
+        $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints));
 
-                $versionParser = new VersionParser();
-                $constraintA = $versionParser->parseConstraints($a);
-                $constraintB = $versionParser->parseConstraints($b);
-
-                if (!$constraintA->matches($constraintB)) {
-                    throw new RuntimeException(sprintf('Unable to combine version constraint "%s" with "%s" for %s.', $a, $b, $name));
-                }
-
-                $aParts = preg_split('/\s*\|\|?\s*/', trim($a));
-                $bParts = preg_split('/\s*\|\|?\s*/', trim($b));
-
-                foreach ($aParts as $aKey => $aPart) {
-                    if (!$versionParser->parseConstraints($aPart)->matches($constraintB)) {
-                        unset($aParts[$aKey]);
-                    }
-                }
-
-                foreach ($bParts as $bKey => $bPart) {
-                    if (!$versionParser->parseConstraints($bPart)->matches($constraintA)) {
-                        unset($bParts[$bKey]);
-                    }
-                }
-
-                foreach ($aParts as $aKey => $aPart) {
-                    foreach ($bParts as $bKey => $bPart) {
-                        if (!$versionParser->parseConstraints($aPart)->matches($versionParser->parseConstraints($bPart))) {
-                            continue;
-                        }
-
-                        if ($aPart === $bPart) {
-                            unset($aParts[$aKey]);
-                            continue 2;
-                        }
-
-                        if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
-                            if (Comparator::greaterThan(substr($aPart, 1), substr($bPart, 1))) {
-                                unset($bParts[$bKey]);
-                                continue;
-                            }
-
-                            unset($aParts[$aKey]);
-                            continue 2;
-                        }
-
-                        if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^[0-9\.]+\.\*$/', $bPart)) {
-                            unset($aParts[$aKey]);
-                            continue 2;
-                        }
-
-                        if (preg_match('/^[0-9\.]+\.\*$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
-                            unset($bParts[$bKey]);
-                            continue;
-                        }
-
-                        throw new RuntimeException(sprintf('Constraint like "%s" with "%s" for %s are currently not supported.', $a, $b, $name));
-                    }
-                }
-
-                return trim(implode(' || ', $aParts).' || '.implode(' || ', $bParts), ' |');
-            }
-        );
+        return str_replace(['[', ']'], '', $compact);
     }
 
     private function combineBins(array $binaryPaths): array
