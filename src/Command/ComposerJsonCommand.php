@@ -12,7 +12,6 @@ declare(strict_types=1);
 
 namespace Contao\MonorepoTools\Command;
 
-use Composer\Semver\Comparator;
 use Composer\Semver\Constraint\MultiConstraint;
 use Composer\Semver\Intervals;
 use Composer\Semver\VersionParser;
@@ -39,9 +38,14 @@ class ComposerJsonCommand extends Command
     private $config;
 
     /**
-     * @var array
+     * @var array<string,array<string,string>>
      */
     private $replacedPackages = [];
+
+    /**
+     * @var array<string,string>
+     */
+    private $prettyVersionConstraints = [];
 
     public function __construct(string $rootDir)
     {
@@ -220,6 +224,22 @@ class ComposerJsonCommand extends Command
             },
             array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
         );
+
+        $this->cachePrettyVersionConstraints(array_merge(
+            array_values($rootJson['require'] ?? []),
+            array_values($rootJson['require-dev'] ?? []),
+            array_values($rootJson['conflict'] ?? []),
+            array_merge(...array_values(array_map(
+                static function ($json) {
+                    return array_merge(
+                        array_values($json['require'] ?? []),
+                        array_values($json['require-dev'] ?? []),
+                        array_values($json['conflict'] ?? []),
+                    );
+                },
+                $jsons
+            ))),
+        ));
 
         $rootJson['replace'] = array_combine(
             array_map(
@@ -410,10 +430,38 @@ class ComposerJsonCommand extends Command
         foreach ($constraints as $constraint) {
             $parsedConstraints[] = $versionParser->parseConstraints($constraint);
         }
-        
+
         $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints));
 
+        if (isset($this->prettyVersionConstraints[$compact])) {
+            return $this->prettyVersionConstraints[$compact];
+        }
+
         return str_replace(['[', ']'], '', $compact);
+    }
+
+    /**
+     * Cache the pretty version constraints indexed by their normalized form.
+     */
+    private function cachePrettyVersionConstraints(array $constraints): void
+    {
+        $versionParser = new VersionParser();
+
+        foreach (array_unique($constraints) as $constraint) {
+            if ('self.version' === $constraint) {
+                continue;
+            }
+
+            $normalized = (string) Intervals::compactConstraint(
+                MultiConstraint::create([$versionParser->parseConstraints($constraint)])
+            );
+
+            if (isset($this->prettyVersionConstraints[$normalized])) {
+                continue;
+            }
+
+            $this->prettyVersionConstraints[$normalized] = $constraint;
+        }
     }
 
     private function combineBins(array $binaryPaths): array
