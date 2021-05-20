@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
@@ -110,7 +110,7 @@ class Repository
             'fetch',
             '--no-tags',
             $remote,
-            '+refs/tags/*:refs/tags/'.$prefix.'*'
+            '+refs/tags/*:refs/tags/'.$prefix.'*',
         ]);
 
         return $this;
@@ -124,7 +124,7 @@ class Repository
             'fetch',
             '--no-tags',
             $remote,
-            '+refs/tags/'.$tag.':refs/tags/'.$prefix.$tag
+            '+refs/tags/'.$tag.':refs/tags/'.$prefix.$tag,
         ]);
 
         return $this;
@@ -207,7 +207,7 @@ class Repository
 
     public function commitTree(string $treeHash, string $message, array $parents = [], bool $copyDateFromParents = false): string
     {
-        $command = [];
+        $env = [];
 
         if ($copyDateFromParents) {
             $date = null;
@@ -221,12 +221,12 @@ class Repository
             }
 
             if ($date) {
-                $command[] = 'GIT_AUTHOR_DATE='.$date->format('U O');
-                $command[] = 'GIT_COMMITTER_DATE='.$date->format('U O');
+                $env['GIT_AUTHOR_DATE'] = $date->format('U O');
+                $env['GIT_COMMITTER_DATE'] = $date->format('U O');
             }
         }
 
-        $command = array_merge($command, ['git', '--git-dir='.$this->path, 'commit-tree']);
+        $command = ['git', '--git-dir='.$this->path, 'commit-tree'];
 
         foreach ($parents as $parent) {
             $command[] = '-p';
@@ -238,7 +238,7 @@ class Repository
 
         $command[] = $treeHash;
 
-        return $this->run($command)[0];
+        return $this->run($command, true, $env)[0];
     }
 
     public function addBranch(string $name, string $hash): self
@@ -349,7 +349,7 @@ class Repository
         );
     }
 
-    private function run(array $command, $exitOnFailure = true): array
+    private function run(array $command, $exitOnFailure = true, array $env = null): array
     {
         // Move the cursor to the beginning of the line
         $this->output->write("\x0D");
@@ -358,7 +358,7 @@ class Repository
         $this->output->write("\x1B[2K");
         $this->output->write(implode(' ', $command));
 
-        $process = new Process($command);
+        $process = new Process($command, null, $env);
         $process->run();
 
         if ($exitOnFailure && !$process->isSuccessful()) {

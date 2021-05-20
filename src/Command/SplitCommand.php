@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
@@ -40,23 +40,9 @@ class SplitCommand extends Command
     {
         $this
             ->setName('split')
-            ->addArgument(
-                'branch-or-tag',
-                InputArgument::OPTIONAL,
-                'Which branch or tag should be split, defaults to all branches that match the configured branch filter.'
-            )
-            ->addOption(
-                'cache-dir',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Absolute path to cache directory, defaults to .monorepo-split-cache in the project directory.'
-            )
-            ->addOption(
-                'force-push',
-                null,
-                null,
-                'Force push branches (not tags) to splitted remotes. Dangerous!'
-            )
+            ->addArgument('branch-or-tag', InputArgument::OPTIONAL, 'Which branch or tag should be split, defaults to all branches that match the configured branch filter.')
+            ->addOption('cache-dir', null, InputOption::VALUE_REQUIRED, 'Absolute path to cache directory, defaults to .monorepo-split-cache in the project directory.')
+            ->addOption('force-push', null, InputOption::VALUE_NONE, 'Force push branches (not tags) to splitted remotes. Dangerous!')
             ->setDescription('Split the monorepo into repositories by subfolder.')
         ;
     }

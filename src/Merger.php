@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
@@ -39,7 +39,7 @@ class Merger
     private $repoUrlsByFolder;
 
     /**
-     * @var string[]
+     * @var array<string>
      */
     private $ignoreCommits;
 
@@ -101,7 +101,7 @@ class Merger
         $this->output->writeln("\nMerge repositories...");
         $mainCommits = [];
 
-        foreach ($this->repoUrlsByFolder as $subFolder => $remote) {
+        foreach (array_keys($this->repoUrlsByFolder) as $subFolder) {
             $mainCommits[$subFolder] = $this->mergeRepo($subFolder);
         }
 
@@ -119,7 +119,7 @@ class Merger
             }
         }
 
-        foreach ($trees['branches'] as $branch => $treeByFolder) {
+        foreach ($trees['branches'] ?? [] as $branch => $treeByFolder) {
             $this->repository->addBranch(
                 $branch,
                 $this->repository->commitTree(
@@ -135,7 +135,7 @@ class Merger
             );
         }
 
-        foreach ($trees['tags'] as $tag => $treeByFolder) {
+        foreach ($trees['tags'] ?? [] as $tag => $treeByFolder) {
             $this->repository->addTag(
                 $tag,
                 $this->repository->commitTree(

@@ -3,23 +3,24 @@
 declare(strict_types=1);
 
 /*
- * This file is part of the Contao monorepo tools.
+ * This file is part of Contao.
  *
- * (c) Martin Auswöger
+ * (c) Leo Feyer
  *
  * @license LGPL-3.0-or-later
  */
 
 namespace Contao\MonorepoTools\Command;
 
-use Composer\Semver\Comparator;
+use Composer\Semver\Constraint\MultiConstraint;
+use Composer\Semver\Intervals;
 use Composer\Semver\VersionParser;
 use Contao\MonorepoTools\Config\MonorepoConfiguration;
-use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
@@ -32,14 +33,19 @@ class ComposerJsonCommand extends Command
     private $rootDir;
 
     /**
-     * @var ConfigurationInterface
+     * @var array
      */
     private $config;
 
     /**
-     * @var array
+     * @var array<string,array<string,string>>
      */
     private $replacedPackages = [];
+
+    /**
+     * @var array<string,string>
+     */
+    private $prettyVersionConstraints = [];
 
     public function __construct(string $rootDir)
     {
@@ -52,12 +58,7 @@ class ComposerJsonCommand extends Command
     {
         $this
             ->setName('composer-json')
-            ->addOption(
-                'validate',
-                null,
-                null,
-                'Validate that the composer.json files are up to date'
-            )
+            ->addOption('validate', null, InputOption::VALUE_NONE, 'Validate that the composer.json files are up to date')
             ->setDescription('Merge all composer.json files into the root composer.json file and update the branch alias')
         ;
     }
@@ -128,7 +129,7 @@ class ComposerJsonCommand extends Command
     }
 
     /**
-     * @return array<string,array>
+     * @return array<string,string>
      */
     private function validateJsons(string $rootJson, array $splitJsons): array
     {
@@ -146,12 +147,34 @@ class ComposerJsonCommand extends Command
         $invalid = [];
 
         foreach ($jsonsByPath as $path => $json) {
-            if (json_decode(file_get_contents($path)) != json_decode($json)) {
+            if ($this->sortedJsonDecode(file_get_contents($path)) !== $this->sortedJsonDecode($json)) {
                 $invalid[$path] = $json;
             }
         }
 
         return $invalid;
+    }
+
+    private function sortedJsonDecode(string $jsonString): array
+    {
+        $json = json_decode($jsonString, true);
+
+        $this->kSortArrayRecursive($json);
+
+        return $json;
+    }
+
+    private function kSortArrayRecursive(&$array): void
+    {
+        if (!\is_array($array)) {
+            return;
+        }
+
+        ksort($array);
+
+        foreach ($array as &$value) {
+            $this->kSortArrayRecursive($value);
+        }
     }
 
     /**
@@ -201,6 +224,22 @@ class ComposerJsonCommand extends Command
             },
             array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
         );
+
+        $this->cachePrettyVersionConstraints(array_merge(
+            array_values($rootJson['require'] ?? []),
+            array_values($rootJson['require-dev'] ?? []),
+            array_values($rootJson['conflict'] ?? []),
+            array_merge(...array_values(array_map(
+                static function ($json) {
+                    return array_merge(
+                        array_values($json['require'] ?? []),
+                        array_values($json['require-dev'] ?? []),
+                        array_values($json['conflict'] ?? []),
+                    );
+                },
+                $jsons
+            ))),
+        ));
 
         $rootJson['replace'] = array_combine(
             array_map(
@@ -339,7 +378,7 @@ class ComposerJsonCommand extends Command
                 continue;
             }
 
-            foreach ($this->replacedPackages[$packageName] as $replacedPackageName => $versionConstraint) {
+            foreach (array_keys($this->replacedPackages[$packageName]) as $replacedPackageName) {
                 if (isset($requires[$replacedPackageName])) {
                     $requires[$packageName] = array_merge($requires[$packageName], $requires[$replacedPackageName]);
                     unset($requires[$replacedPackageName]);
@@ -351,114 +390,78 @@ class ComposerJsonCommand extends Command
             $requires[$packageName] = $this->combineConstraints($constraints, $packageName);
         }
 
-        uksort($requires, static function ($a, $b) {
-            if ('php' === $a) {
-                return -1;
-            }
+        uksort(
+            $requires,
+            static function ($a, $b) {
+                if ('php' === $a) {
+                    return -1;
+                }
 
-            if ('php' === $b) {
-                return 1;
-            }
+                if ('php' === $b) {
+                    return 1;
+                }
 
-            if (
-                (0 === strncmp($a, 'ext-', 4) && 0 !== strncmp($b, 'ext-', 4))
-                || (0 === strncmp($a, 'lib-', 4) && 0 !== strncmp($b, 'lib-', 4))
-            ) {
-                return -1;
-            }
+                if (
+                    (0 === strncmp($a, 'ext-', 4) && 0 !== strncmp($b, 'ext-', 4))
+                    || (0 === strncmp($a, 'lib-', 4) && 0 !== strncmp($b, 'lib-', 4))
+                ) {
+                    return -1;
+                }
 
-            if (
-                (0 !== strncmp($a, 'ext-', 4) && 0 === strncmp($b, 'ext-', 4))
-                || (0 !== strncmp($a, 'lib-', 4) && 0 === strncmp($b, 'lib-', 4))
-            ) {
-                return 1;
-            }
+                if (
+                    (0 !== strncmp($a, 'ext-', 4) && 0 === strncmp($b, 'ext-', 4))
+                    || (0 !== strncmp($a, 'lib-', 4) && 0 === strncmp($b, 'lib-', 4))
+                ) {
+                    return 1;
+                }
 
-            return strcmp($a, $b);
-        });
+                return strcmp($a, $b);
+            }
+        );
 
         return $requires;
     }
 
     private function combineConstraints(array $constraints, string $name): string
     {
-        $constraints = array_unique($constraints);
+        $parsedConstraints = [];
+        $versionParser = new VersionParser();
 
-        return array_reduce($constraints, static function ($a, $b) use ($name) {
-            if (null === $a) {
-                return $b;
+        foreach ($constraints as $constraint) {
+            $parsedConstraints[] = $versionParser->parseConstraints($constraint);
+        }
+
+        $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints));
+
+        if (isset($this->prettyVersionConstraints[$compact])) {
+            return $this->prettyVersionConstraints[$compact];
+        }
+
+        return str_replace(['[', ']'], '', $compact);
+    }
+
+    /**
+     * Cache the pretty version constraints indexed by their normalized form.
+     */
+    private function cachePrettyVersionConstraints(array $constraints): void
+    {
+        $versionParser = new VersionParser();
+
+        foreach (array_unique($constraints) as $constraint) {
+            if ('self.version' === $constraint) {
+                continue;
             }
 
-            $versionParser = new VersionParser();
-            $constraintA = $versionParser->parseConstraints($a);
-            $constraintB = $versionParser->parseConstraints($b);
+            $normalized = (string) Intervals::compactConstraint(
+                MultiConstraint::create([$versionParser->parseConstraints($constraint)])
+            );
 
-            if (!$constraintA->matches($constraintB)) {
-                throw new RuntimeException(sprintf(
-                    'Unable to combine version constraint "%s" with "%s" for %s.',
-                    $a,
-                    $b,
-                    $name
-                ));
+            if (isset($this->prettyVersionConstraints[$normalized])) {
+                continue;
             }
 
-            $aParts = preg_split('/\s*\|\|?\s*/', trim($a));
-            $bParts = preg_split('/\s*\|\|?\s*/', trim($b));
-
-            foreach ($aParts as $aKey => $aPart) {
-                if (!$versionParser->parseConstraints($aPart)->matches($constraintB)) {
-                    unset($aParts[$aKey]);
-                }
-            }
-
-            foreach ($bParts as $bKey => $bPart) {
-                if (!$versionParser->parseConstraints($bPart)->matches($constraintA)) {
-                    unset($bParts[$bKey]);
-                }
-            }
-
-            foreach ($aParts as $aKey => $aPart) {
-                foreach ($bParts as $bKey => $bPart) {
-                    if (!$versionParser->parseConstraints($aPart)->matches($versionParser->parseConstraints($bPart))) {
-                        continue;
-                    }
-
-                    if ($aPart === $bPart) {
-                        unset($aParts[$aKey]);
-                        continue 2;
-                    }
-
-                    if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
-                        if (Comparator::greaterThan(substr($aPart, 1), substr($bPart, 1))) {
-                            unset($bParts[$bKey]);
-                            continue;
-                        }
-
-                        unset($aParts[$aKey]);
-                        continue 2;
-                    }
-
-                    if (preg_match('/^\^[0-9\.]+$/', $aPart) && preg_match('/^[0-9\.]+\.\*$/', $bPart)) {
-                        unset($aParts[$aKey]);
-                        continue 2;
-                    }
-
-                    if (preg_match('/^[0-9\.]+\.\*$/', $aPart) && preg_match('/^\^[0-9\.]+$/', $bPart)) {
-                        unset($bParts[$bKey]);
-                        continue;
-                    }
-
-                    throw new RuntimeException(sprintf(
-                        'Constraint like "%s" with "%s" for %s are currently not supported.',
-                        $a,
-                        $b,
-                        $name
-                    ));
-                }
-            }
-
-            return trim(implode(' || ', $aParts).' || '.implode(' || ', $bParts), ' |');
-        });
+            $this->prettyVersionConstraints[$normalized] = $constraint;
+        }
     }
 
     private function combineBins(array $binaryPaths): array
