@@ -308,7 +308,8 @@ class ComposerJsonCommand extends Command
                 ),
                 [$this->config['composer']['conflict'] ?? []]
             ),
-            array_keys($rootJson['replace'])
+            array_keys($rootJson['replace']),
+            false
         );
 
         $rootJson['bin'] = $this->combineBins(
@@ -358,7 +359,7 @@ class ComposerJsonCommand extends Command
         return json_encode($rootJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
     }
 
-    private function combineDependecies(array $requireArrays, array $ignorePackages = []): array
+    private function combineDependecies(array $requireArrays, array $ignorePackages = [], bool $conjunctive = true): array
     {
         $requires = [];
 
@@ -387,7 +388,7 @@ class ComposerJsonCommand extends Command
         }
 
         foreach ($requires as $packageName => $constraints) {
-            $requires[$packageName] = $this->combineConstraints($constraints, $packageName);
+            $requires[$packageName] = $this->combineConstraints($constraints, $packageName, $conjunctive);
         }
 
         uksort(
@@ -422,7 +423,7 @@ class ComposerJsonCommand extends Command
         return $requires;
     }
 
-    private function combineConstraints(array $constraints, string $name): string
+    private function combineConstraints(array $constraints, string $name, bool $conjunctive = true): string
     {
         $parsedConstraints = [];
         $versionParser = new VersionParser();
@@ -431,7 +432,7 @@ class ComposerJsonCommand extends Command
             $parsedConstraints[] = $versionParser->parseConstraints($constraint);
         }
 
-        $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints));
+        $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints, $conjunctive));
 
         if (isset($this->prettyVersionConstraints[$compact])) {
             return $this->prettyVersionConstraints[$compact];
