@@ -416,6 +416,14 @@ class ComposerJsonCommand extends Command
                     return 1;
                 }
 
+                if ('composer-runtime-api' === $a) {
+                    return -1;
+                }
+
+                if ('composer-runtime-api' === $b) {
+                    return 1;
+                }
+
                 return strcmp($a, $b);
             }
         );
