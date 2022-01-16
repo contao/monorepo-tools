@@ -416,11 +416,11 @@ class ComposerJsonCommand extends Command
                     return 1;
                 }
 
-                if ('composer-runtime-api' === $a) {
+                if (strpos($a, '/') === false && strpos($b, '/') !== false) {
                     return -1;
                 }
 
-                if ('composer-runtime-api' === $b) {
+                if (strpos($b, '/') === false && strpos($a, '/') !== false) {
                     return 1;
                 }
 
