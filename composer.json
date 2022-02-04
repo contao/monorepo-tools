@@ -1,8 +1,8 @@
 {
     "name": "contao/monorepo-tools",
-    "type": "library",
     "description": "Contao Monorepo Tools",
     "license": "LGPL-3.0-or-later",
+    "type": "library",
     "authors": [
         {
             "name": "Martin Auswöger",
@@ -31,6 +31,9 @@
         "psalm/plugin-symfony": "^2.2",
         "slam/phpstan-extensions": "^5.1",
         "vimeo/psalm": "^4.7.2"
+    },
+    "conflict": {
+        "composer/semver": "3.2.8"
     },
     "autoload": {
         "psr-4": {
