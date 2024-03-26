@@ -15,11 +15,11 @@
         "ext-zlib": "*",
         "composer/semver": "^3.2",
         "phpspec/php-diff": "^1.0",
-        "symfony/config": ">=3.4",
-        "symfony/console": ">=3.4",
-        "symfony/filesystem": ">=3.4",
-        "symfony/process": ">=3.4",
-        "symfony/yaml": ">=3.4"
+        "symfony/config": "^5.4 || ^6.4 || ^7.0",
+        "symfony/console": "^5.4 || ^6.4 || ^7.0",
+        "symfony/filesystem": "^5.4 || ^6.4 || ^7.0",
+        "symfony/process": "^5.4 || ^6.4 || ^7.0",
+        "symfony/yaml": "^5.4 || ^6.4 || ^7.0"
     },
     "require-dev": {
         "contao/code-quality": "^1.0",
