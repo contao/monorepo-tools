@@ -66,12 +66,12 @@ class Splitter
     private $output;
 
     /**
-     * @var array<string,Commit>
+     * @var array<string, Commit>
      */
     private $commitCache = [];
 
     /**
-     * @var array<string,Tree>
+     * @var array<string, Tree>
      */
     private $treeCache = [];
 
@@ -235,7 +235,7 @@ class Splitter
     }
 
     /**
-     * @return array<string,array<string,string>>
+     * @return array<string, array<string, string>>
      */
     private function splitCommits(array $commitObjects, array $subRepos): array
     {
@@ -352,7 +352,7 @@ class Splitter
     }
 
     /**
-     * @return array<string,Commit>
+     * @return array<string, Commit>
      */
     private function readCommits(array $baseCommits): array
     {

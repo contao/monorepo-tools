@@ -15,22 +15,17 @@
         "ext-zlib": "*",
         "composer/semver": "^3.2",
         "phpspec/php-diff": "^1.0",
-        "symfony/config": "^3.4 || ^4.0 || ^5.0",
-        "symfony/console": "^3.4 || ^4.0 || ^5.0",
-        "symfony/filesystem": "^3.4 || ^4.0 || ^5.0",
-        "symfony/process": "^3.4 || ^4.0 || ^5.0",
-        "symfony/yaml": "^3.4 || ^4.0 || ^5.0"
+        "symfony/config": ">=3.4",
+        "symfony/console": ">=3.4",
+        "symfony/filesystem": ">=3.4",
+        "symfony/process": ">=3.4",
+        "symfony/yaml": ">=3.4"
     },
     "require-dev": {
-        "contao/easy-coding-standard": "^1.3",
-        "phpstan/phpstan": "^0.12",
-        "phpstan/phpstan-phpunit": "^0.12.8",
-        "phpstan/phpstan-symfony": "^0.12.6",
-        "phpunit/phpunit": "^9.5",
-        "psalm/plugin-phpunit": "^0.15",
-        "psalm/plugin-symfony": "^2.2",
-        "slam/phpstan-extensions": "^5.1",
-        "vimeo/psalm": "^4.7.2"
+        "contao/code-quality": "^1.0",
+        "phpstan/phpstan": "^1.0",
+        "phpstan/phpstan-symfony": "^1.0",
+        "phpunit/phpunit": "^9.5"
     },
     "conflict": {
         "composer/semver": "3.2.8"
@@ -48,24 +43,19 @@
     "bin": [
         "bin/monorepo-tools"
     ],
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
     "scripts": {
         "all": [
+            "@ecs",
             "@unit-tests",
-            "@cs-fixer",
-            "@phpstan",
-            "@psalm"
+            "@phpstan"
         ],
-        "cs-fixer": [
-            "vendor/bin/ecs check src tests --config ecs.php --fix --ansi"
-        ],
-        "phpstan": [
-            "vendor/bin/phpstan analyze src tests --level=5 --memory-limit=1G --ansi"
-        ],
-        "psalm": [
-            "vendor/bin/psalm --no-suggestions --threads=4"
-        ],
-        "unit-tests": [
-            "vendor/bin/phpunit --colors=always"
-        ]
+        "ecs": "@php vendor/bin/ecs check --fix --ansi",
+        "phpstan": "@php vendor/bin/phpstan analyze  --ansi",
+        "unit-tests": "@php vendor/bin/phpunit --colors=always"
     }
 }

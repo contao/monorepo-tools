@@ -1,5 +1,10 @@
-/.monorepo-split-cache/
-/.monorepo-merge-cache/
+# Composer
 /vendor/
 /composer.lock
+
+# Monorepo Tools
+/.monorepo-split-cache/
+
+# PhpUnit
 /.phpunit.result.cache
+/phpunit.xml

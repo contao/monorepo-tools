@@ -38,12 +38,12 @@ class ComposerJsonCommand extends Command
     private $config;
 
     /**
-     * @var array<string,array<string,string>>
+     * @var array<string, array<string, string>>
      */
     private $replacedPackages = [];
 
     /**
-     * @var array<string,string>
+     * @var array<string, string>
      */
     private $prettyVersionConstraints = [];
 
@@ -129,7 +129,7 @@ class ComposerJsonCommand extends Command
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     private function validateJsons(string $rootJson, array $splitJsons): array
     {
@@ -178,7 +178,7 @@ class ComposerJsonCommand extends Command
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     private function updateJsons(string $rootJson, array $splitJsons): array
     {
@@ -416,11 +416,11 @@ class ComposerJsonCommand extends Command
                     return 1;
                 }
 
-                if (strpos($a, '/') === false && strpos($b, '/') !== false) {
+                if (false === strpos($a, '/') && false !== strpos($b, '/')) {
                     return -1;
                 }
 
-                if (strpos($b, '/') === false && strpos($a, '/') !== false) {
+                if (false === strpos($b, '/') && false !== strpos($a, '/')) {
                     return 1;
                 }
 
@@ -517,8 +517,7 @@ class ComposerJsonCommand extends Command
                 'classmap' => [],
                 'exclude-from-classmap' => [],
                 'files' => [],
-            ]
-        ;
+            ];
 
         foreach ($autoloadConfigs as $folder => $autoload) {
             if ($folder) {

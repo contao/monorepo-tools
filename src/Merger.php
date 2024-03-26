@@ -34,7 +34,7 @@ class Merger
     ];
 
     /**
-     * @var array<string,string>
+     * @var array<string, string>
      */
     private $repoUrlsByFolder;
 
@@ -59,12 +59,12 @@ class Merger
     private $output;
 
     /**
-     * @var array<string,Commit>
+     * @var array<string, Commit>
      */
     private $commitCache = [];
 
     /**
-     * @var array<string,array<string,string>>
+     * @var array<string, array<string, string>>
      */
     private $exportMappingByFolder = [];
 
@@ -175,7 +175,7 @@ class Merger
     }
 
     /**
-     * @return array<string,array<string,string>>
+     * @return array<string, array<string, string>>
      */
     private function mergeRepo(string $subFolder): array
     {
@@ -224,9 +224,9 @@ class Merger
     }
 
     /**
-     * @param array<string,Commit> $commits
+     * @param array<string, Commit> $commits
      *
-     * @return array<string,string>
+     * @return array<string, string>
      */
     private function moveCommitsToSubfolder(array $commits, string $subFolder): array
     {
@@ -307,8 +307,7 @@ class Merger
                     function ($parentHash) use (&$hashMapping) {
                         return \in_array($parentHash, $this->ignoreCommits, true)
                             ? null
-                            : $hashMapping[$parentHash]
-                        ;
+                            : $hashMapping[$parentHash];
                     },
                     $oldCommit->getParentHashes()
                 ))

@@ -131,7 +131,7 @@ class Repository
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     public function getRemoteBranches(string $remote): array
     {
@@ -152,7 +152,7 @@ class Repository
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     public function getTags(string $prefix): array
     {
