@@ -11,34 +11,6 @@ on:
         - cron: 0 13 * * MON,TUE
 
 jobs:
-    coverage:
-        name: Coverage
-        runs-on: ubuntu-latest
-        if: github.event_name != 'schedule'
-        steps:
-            - name: Setup PHP
-              uses: shivammathur/setup-php@v2
-              with:
-                  php-version: 7.4
-                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo, zlib
-                  tools: prestissimo, flex
-                  coverage: none
-
-            - name: Checkout
-              uses: actions/checkout@v2
-
-            - name: Install the dependencies
-              run: composer install --no-interaction --no-suggest
-
-            - name: Generate the coverage report
-              run: phpdbg -qrr vendor/bin/phpunit --coverage-clover=clover.xml  --colors=always
-
-            - name: Upload the coverage report
-              uses: codecov/codecov-action@v1
-              with:
-                  file: ./clover.xml
-                  fail_ci_if_error: true
-
     coding-style:
         name: Coding Style
         runs-on: ubuntu-latest
@@ -53,18 +25,16 @@ jobs:
                   coverage: none
 
             - name: Checkout
-              uses: actions/checkout@v2
+              uses: actions/checkout@v3
 
             - name: Install the dependencies
               run: composer install --no-interaction --no-suggest
 
             - name: Check the coding style
-              run: vendor/bin/ecs check src tests --config ecs.php --no-progress-bar --ansi
+              run: vendor/bin/ecs check --no-progress-bar --ansi
 
             - name: Analyze the code
-              run: |
-                  vendor/bin/phpstan analyse src tests --level=5 --no-progress
-                  vendor/bin/psalm --no-suggestions --threads=4 --no-progress
+              run: vendor/bin/phpstan analyse --no-progress
 
     tests:
         name: PHP ${{ matrix.php }}
@@ -73,7 +43,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                php: [7.4, 8.0]
+                php: [7.4, 8.0, 8.1, 8.2, 8.3]
         steps:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -84,7 +54,7 @@ jobs:
                   coverage: none
 
             - name: Checkout
-              uses: actions/checkout@v2
+              uses: actions/checkout@v3
 
             - name: Install the dependencies
               run: composer install --no-interaction --no-suggest
@@ -106,7 +76,7 @@ jobs:
                   coverage: none
 
             - name: Checkout
-              uses: actions/checkout@v2
+              uses: actions/checkout@v3
 
             - name: Install the dependencies
               run: composer update --prefer-lowest --prefer-stable --no-interaction --no-suggest
