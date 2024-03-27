@@ -10,18 +10,28 @@ declare(strict_types=1);
  * @license LGPL-3.0-or-later
  */
 
+use PhpCsFixer\Fixer\Comment\HeaderCommentFixer;
+use PhpCsFixer\Fixer\Operator\NoUselessConcatOperatorFixer;
 use PhpCsFixer\Fixer\Whitespace\MethodChainingIndentationFixer;
-use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symplify\EasyCodingStandard\Config\ECSConfig;
 use Symplify\EasyCodingStandard\ValueObject\Option;
 
-return static function (ContainerConfigurator $containerConfigurator): void {
-    $containerConfigurator->import(__DIR__.'/vendor/contao/easy-coding-standard/config/set/contao.php');
-
-    $parameters = $containerConfigurator->parameters();
-
-    $parameters->set(Option::SKIP, [
+return ECSConfig::configure()
+    ->withSets([__DIR__.'/vendor/contao/code-quality/config/ecs.php'])
+    ->withPaths([
+        __DIR__.'/src',
+        __DIR__.'/tests',
+    ])
+    ->withSkip([
         MethodChainingIndentationFixer::class => [
-            '*/Config/MonorepoConfiguration.php',
+            'src/Config/MonorepoConfiguration.php',
         ],
-    ]);
-};
+        NoUselessConcatOperatorFixer::class => [
+            'tests/Git/TreeTest.php',
+        ],
+    ])
+    ->withParallel()
+    ->withSpacing(Option::INDENTATION_SPACES, "\n")
+    ->withConfiguredRule(HeaderCommentFixer::class, ['header' => "This file is part of Contao.\n\n(c) Leo Feyer\n\n@license LGPL-3.0-or-later"])
+    ->withCache(sys_get_temp_dir().'/ecs_monorepo_cache')
+;

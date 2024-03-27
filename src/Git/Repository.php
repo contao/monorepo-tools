@@ -19,20 +19,10 @@ use Symfony\Component\Process\Process;
 
 class Repository
 {
-    /**
-     * @var string
-     */
-    private $path;
-
-    /**
-     * @var OutputInterface
-     */
-    private $output;
-
-    public function __construct(string $path, OutputInterface $output)
-    {
-        $this->path = $path;
-        $this->output = $output;
+    public function __construct(
+        private readonly string $path,
+        private readonly OutputInterface $output,
+    ) {
     }
 
     public function init(): self
@@ -92,11 +82,9 @@ class Repository
     {
         $this->executeConcurrent(
             array_map(
-                function ($remote) {
-                    return ['git', '--git-dir='.$this->path, 'fetch', '--no-tags', $remote];
-                },
-                $remotes
-            )
+                fn ($remote) => ['git', '--git-dir='.$this->path, 'fetch', '--no-tags', $remote],
+                $remotes,
+            ),
         );
 
         return $this;
@@ -131,7 +119,7 @@ class Repository
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     public function getRemoteBranches(string $remote): array
     {
@@ -140,7 +128,7 @@ class Repository
         foreach ($this->run(['git', '--git-dir='.$this->path, 'branch', '-r']) as $branch) {
             $branch = trim($branch);
 
-            if ('' === $branch || 0 !== strncmp($branch, $remote.'/', \strlen($remote.'/'))) {
+            if ('' === $branch || !str_starts_with($branch, $remote.'/')) {
                 continue;
             }
 
@@ -152,7 +140,7 @@ class Repository
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     public function getTags(string $prefix): array
     {
@@ -174,7 +162,7 @@ class Repository
     {
         $result = $this->run(['git', '--git-dir='.$this->path, 'rev-list', '-n', '1', $tag]);
 
-        if (!\count($result) || 40 !== \strlen($result[0])) {
+        if ([] === $result || 40 !== \strlen($result[0])) {
             throw new \RuntimeException(sprintf('Tag %s not found.', $tag));
         }
 
@@ -265,12 +253,10 @@ class Repository
     {
         $this->pushRefspecs(
             array_map(
-                static function ($pushBranch) {
-                    return ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]];
-                },
-                $branches
+                static fn ($pushBranch) => ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]],
+                $branches,
             ),
-            $force
+            $force,
         );
 
         return $this;
@@ -287,12 +273,10 @@ class Repository
     {
         $this->pushRefspecs(
             array_map(
-                static function ($pushTag) {
-                    return ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]];
-                },
-                $tags
+                static fn ($pushTag) => ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]],
+                $tags,
             ),
-            $force
+            $force,
         );
 
         return $this;
@@ -344,12 +328,12 @@ class Repository
 
                     return $command;
                 },
-                $refspecsRemote
-            )
+                $refspecsRemote,
+            ),
         );
     }
 
-    private function run(array $command, $exitOnFailure = true, array $env = null): array
+    private function run(array $command, $exitOnFailure = true, array|null $env = null): array
     {
         // Move the cursor to the beginning of the line
         $this->output->write("\x0D");

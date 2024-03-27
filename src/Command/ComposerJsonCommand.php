@@ -27,30 +27,20 @@ use Symfony\Component\Yaml\Yaml;
 
 class ComposerJsonCommand extends Command
 {
-    /**
-     * @var string
-     */
-    private $rootDir;
+    private array $config;
 
     /**
-     * @var array
+     * @var array<string, array<string, string>>
      */
-    private $config;
+    private array $replacedPackages = [];
 
     /**
-     * @var array<string,array<string,string>>
+     * @var array<string, string>
      */
-    private $replacedPackages = [];
+    private array $prettyVersionConstraints = [];
 
-    /**
-     * @var array<string,string>
-     */
-    private $prettyVersionConstraints = [];
-
-    public function __construct(string $rootDir)
+    public function __construct(private readonly string $rootDir)
     {
-        $this->rootDir = $rootDir;
-
         parent::__construct();
     }
 
@@ -71,9 +61,9 @@ class ComposerJsonCommand extends Command
                 Yaml::parse(file_get_contents(
                     file_exists($this->rootDir.'/monorepo-split.yml')
                         ? $this->rootDir.'/monorepo-split.yml'
-                        : $this->rootDir.'/monorepo.yml'
+                        : $this->rootDir.'/monorepo.yml',
                 )),
-            ]
+            ],
         );
 
         $io = new SymfonyStyle($input, $output);
@@ -83,17 +73,15 @@ class ComposerJsonCommand extends Command
         if ($input->getOption('validate')) {
             $invalid = $this->validateJsons($rootJson, $splitJsons);
 
-            if (0 === \count($invalid)) {
+            if ([] === $invalid) {
                 $io->success('All composer.json files are up to date.');
 
                 return 0;
             }
 
             $files = array_map(
-                function ($path) {
-                    return str_replace($this->rootDir.'/', '', $path);
-                },
-                array_keys($invalid)
+                fn ($path) => str_replace($this->rootDir.'/', '', $path),
+                array_keys($invalid),
             );
 
             $io->error('The following files are not up to date: '.implode(',', $files));
@@ -110,17 +98,15 @@ class ComposerJsonCommand extends Command
 
         $updated = $this->updateJsons($rootJson, $splitJsons);
 
-        if (0 === \count($updated)) {
+        if ([] === $updated) {
             $io->success('All composer.json files are up to date.');
 
             return 0;
         }
 
         $files = array_map(
-            function ($path) {
-                return str_replace($this->rootDir.'/', '', $path);
-            },
-            array_keys($updated)
+            fn ($path) => str_replace($this->rootDir.'/', '', $path),
+            array_keys($updated),
         );
 
         $io->success('The following files have been updated: '.implode(',', $files));
@@ -129,18 +115,16 @@ class ComposerJsonCommand extends Command
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     private function validateJsons(string $rootJson, array $splitJsons): array
     {
         $jsonsByPath = array_combine(
             array_map(
-                function ($folder) {
-                    return $this->rootDir.'/'.$folder.'/composer.json';
-                },
-                array_keys($splitJsons)
+                fn ($folder) => $this->rootDir.'/'.$folder.'/composer.json',
+                array_keys($splitJsons),
             ),
-            array_values($splitJsons)
+            array_values($splitJsons),
         );
 
         $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
@@ -178,7 +162,7 @@ class ComposerJsonCommand extends Command
     }
 
     /**
-     * @return array<string,string>
+     * @return array<string, string>
      */
     private function updateJsons(string $rootJson, array $splitJsons): array
     {
@@ -222,66 +206,56 @@ class ComposerJsonCommand extends Command
 
                 return json_decode(file_get_contents($path), true);
             },
-            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
+            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories'])),
         );
 
-        $this->cachePrettyVersionConstraints(array_merge(
-            array_values($rootJson['require'] ?? []),
-            array_values($rootJson['require-dev'] ?? []),
-            array_values($rootJson['conflict'] ?? []),
-            array_merge(...array_values(array_map(
-                static function ($json) {
-                    return array_merge(
-                        array_values($json['require'] ?? []),
-                        array_values($json['require-dev'] ?? []),
-                        array_values($json['conflict'] ?? []),
-                    );
-                },
-                $jsons
+        $this->cachePrettyVersionConstraints([
+            ...array_values($rootJson['require'] ?? []),
+            ...array_values($rootJson['require-dev'] ?? []),
+            ...array_values($rootJson['conflict'] ?? []),
+            ...array_merge(...array_values(array_map(
+                static fn ($json) => [
+                    ...array_values($json['require'] ?? []),
+                    ...array_values($json['require-dev'] ?? []),
+                    ...array_values($json['conflict'] ?? []),
+                ],
+                $jsons,
             ))),
-        ));
+        ]);
 
         $rootJson['replace'] = array_combine(
             array_map(
-                static function ($json) {
-                    return $json['name'];
-                },
-                $jsons
+                static fn ($json) => $json['name'],
+                $jsons,
             ),
             array_map(
-                static function () {
-                    return 'self.version';
-                },
-                $jsons
-            )
+                static fn () => 'self.version',
+                $jsons,
+            ),
         );
 
         ksort($rootJson['replace']);
 
         $rootJson['require'] = $this->combineDependecies(
-            array_merge(
-                array_map(
-                    static function ($json) {
-                        return $json['require'] ?? [];
-                    },
-                    $jsons
+            [
+                ...array_map(
+                    static fn ($json) => $json['require'] ?? [],
+                    $jsons,
                 ),
-                [$this->config['composer']['require'] ?? []]
-            ),
-            array_keys($rootJson['replace'])
+                $this->config['composer']['require'] ?? [],
+            ],
+            array_keys($rootJson['replace']),
         );
 
         $rootJson['require-dev'] = $this->combineDependecies(
-            array_merge(
-                array_map(
-                    static function ($json) {
-                        return $json['require-dev'] ?? [];
-                    },
-                    $jsons
+            [
+                ...array_map(
+                    static fn ($json) => $json['require-dev'] ?? [],
+                    $jsons,
                 ),
-                [$this->config['composer']['require-dev'] ?? []]
-            ),
-            array_keys($rootJson['replace'])
+                $this->config['composer']['require-dev'] ?? [],
+            ],
+            array_keys($rootJson['replace']),
         );
 
         foreach ($rootJson['require'] as $packageName => $versionConstraint) {
@@ -291,7 +265,6 @@ class ComposerJsonCommand extends Command
                         $rootJson['require-dev'][$packageName],
                         $versionConstraint,
                     ],
-                    $packageName
                 );
 
                 unset($rootJson['require-dev'][$packageName]);
@@ -299,59 +272,51 @@ class ComposerJsonCommand extends Command
         }
 
         $rootJson['conflict'] = $this->combineDependecies(
-            array_merge(
-                array_map(
-                    static function ($json) {
-                        return $json['conflict'] ?? [];
-                    },
-                    $jsons
+            [
+                ...array_map(
+                    static fn ($json) => $json['conflict'] ?? [],
+                    $jsons,
                 ),
-                [$this->config['composer']['conflict'] ?? []]
-            ),
+                $this->config['composer']['conflict'] ?? [],
+            ],
             array_keys($rootJson['replace']),
-            false
+            false,
         );
 
         $rootJson['bin'] = $this->combineBins(
             array_map(
-                static function ($json) {
-                    return $json['bin'] ?? [];
-                },
-                $jsons
-            )
+                static fn ($json) => $json['bin'] ?? [],
+                $jsons,
+            ),
         );
 
         $rootJson['extra']['contao-manager-plugin'] = $this->combineManagerPlugins($jsons);
 
         $rootJson['autoload'] = $this->combineAutoload(
-            array_merge(
-                array_map(
-                    static function ($json) {
-                        return $json['autoload'] ?? [];
-                    },
-                    $jsons
+            [
+                ...array_map(
+                    static fn ($json) => $json['autoload'] ?? [],
+                    $jsons,
                 ),
-                ['' => $this->config['composer']['autoload'] ?? []]
-            ),
-            $rootJson['autoload'] ?? null
+                '' => $this->config['composer']['autoload'] ?? [],
+            ],
+            $rootJson['autoload'] ?? null,
         );
 
         $rootJson['autoload-dev'] = $this->combineAutoload(
-            array_merge(
-                array_map(
-                    static function ($json) {
-                        return $json['autoload-dev'] ?? [];
-                    },
-                    $jsons
+            [
+                ...array_map(
+                    static fn ($json) => $json['autoload-dev'] ?? [],
+                    $jsons,
                 ),
-                ['' => $this->config['composer']['autoload-dev'] ?? []]
-            ),
-            $rootJson['autoload-dev'] ?? null
+                '' => $this->config['composer']['autoload-dev'] ?? [],
+            ],
+            $rootJson['autoload-dev'] ?? null,
         );
 
         // Remove empty arrays
         foreach ($rootJson as $key => $value) {
-            if (\is_array($value) && 0 === \count($value)) {
+            if ([] === $value) {
                 unset($rootJson[$key]);
             }
         }
@@ -388,7 +353,7 @@ class ComposerJsonCommand extends Command
         }
 
         foreach ($requires as $packageName => $constraints) {
-            $requires[$packageName] = $this->combineConstraints($constraints, $packageName, $conjunctive);
+            $requires[$packageName] = $this->combineConstraints($constraints, $conjunctive);
         }
 
         uksort(
@@ -403,35 +368,35 @@ class ComposerJsonCommand extends Command
                 }
 
                 if (
-                    (0 === strncmp($a, 'ext-', 4) && 0 !== strncmp($b, 'ext-', 4))
-                    || (0 === strncmp($a, 'lib-', 4) && 0 !== strncmp($b, 'lib-', 4))
+                    (str_starts_with($a, 'ext-') && !str_starts_with($b, 'ext-'))
+                    || (str_starts_with($a, 'lib-') && !str_starts_with($b, 'lib-'))
                 ) {
                     return -1;
                 }
 
                 if (
-                    (0 !== strncmp($a, 'ext-', 4) && 0 === strncmp($b, 'ext-', 4))
-                    || (0 !== strncmp($a, 'lib-', 4) && 0 === strncmp($b, 'lib-', 4))
+                    (!str_starts_with($a, 'ext-') && str_starts_with($b, 'ext-'))
+                    || (!str_starts_with($a, 'lib-') && str_starts_with($b, 'lib-'))
                 ) {
                     return 1;
                 }
 
-                if (strpos($a, '/') === false && strpos($b, '/') !== false) {
+                if (!str_contains($a, '/') && str_contains($b, '/')) {
                     return -1;
                 }
 
-                if (strpos($b, '/') === false && strpos($a, '/') !== false) {
+                if (!str_contains($b, '/') && str_contains($a, '/')) {
                     return 1;
                 }
 
                 return strcmp($a, $b);
-            }
+            },
         );
 
         return $requires;
     }
 
-    private function combineConstraints(array $constraints, string $name, bool $conjunctive = true): string
+    private function combineConstraints(array $constraints, bool $conjunctive = true): string
     {
         $parsedConstraints = [];
         $versionParser = new VersionParser();
@@ -442,11 +407,7 @@ class ComposerJsonCommand extends Command
 
         $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints, $conjunctive));
 
-        if (isset($this->prettyVersionConstraints[$compact])) {
-            return $this->prettyVersionConstraints[$compact];
-        }
-
-        return str_replace(['[', ']'], '', $compact);
+        return $this->prettyVersionConstraints[$compact] ?? str_replace(['[', ']'], '', $compact);
     }
 
     /**
@@ -462,7 +423,7 @@ class ComposerJsonCommand extends Command
             }
 
             $normalized = (string) Intervals::compactConstraint(
-                MultiConstraint::create([$versionParser->parseConstraints($constraint)])
+                MultiConstraint::create([$versionParser->parseConstraints($constraint)]),
             );
 
             if (isset($this->prettyVersionConstraints[$normalized])) {
@@ -500,7 +461,7 @@ class ComposerJsonCommand extends Command
 
                 return $json['extra']['contao-manager-plugin'];
             },
-            array_values($jsons)
+            array_values($jsons),
         ));
 
         ksort($plugins);
@@ -508,7 +469,7 @@ class ComposerJsonCommand extends Command
         return $plugins;
     }
 
-    private function combineAutoload(array $autoloadConfigs, array $currentAutoload = null): array
+    private function combineAutoload(array $autoloadConfigs, array|null $currentAutoload = null): array
     {
         $returnAutoload = \is_array($currentAutoload)
             ? array_combine(array_keys($currentAutoload), array_fill(0, \count($currentAutoload), []))
@@ -517,8 +478,7 @@ class ComposerJsonCommand extends Command
                 'classmap' => [],
                 'exclude-from-classmap' => [],
                 'files' => [],
-            ]
-        ;
+            ];
 
         foreach ($autoloadConfigs as $folder => $autoload) {
             if ($folder) {
@@ -575,7 +535,7 @@ class ComposerJsonCommand extends Command
 
                 return json_decode(file_get_contents($path), true);
             },
-            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
+            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories'])),
         );
 
         $jsons = array_map(
@@ -588,14 +548,12 @@ class ComposerJsonCommand extends Command
 
                 return $json;
             },
-            $jsons
+            $jsons,
         );
 
         return array_map(
-            static function ($json) {
-                return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
-            },
-            $jsons
+            static fn ($json) => json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n",
+            $jsons,
         );
     }
 }

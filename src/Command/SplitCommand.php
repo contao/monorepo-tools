@@ -24,15 +24,8 @@ use Symfony\Component\Yaml\Yaml;
 
 class SplitCommand extends Command
 {
-    /**
-     * @var string
-     */
-    private $rootDir;
-
-    public function __construct(string $rootDir)
+    public function __construct(private readonly string $rootDir)
     {
-        $this->rootDir = $rootDir;
-
         parent::__construct();
     }
 
@@ -55,9 +48,9 @@ class SplitCommand extends Command
                 Yaml::parse(file_get_contents(
                     file_exists($this->rootDir.'/monorepo-split.yml')
                         ? $this->rootDir.'/monorepo-split.yml'
-                        : $this->rootDir.'/monorepo.yml'
+                        : $this->rootDir.'/monorepo.yml',
                 )),
-            ]
+            ],
         );
 
         foreach ($config['repositories'] as $folder => $settings) {
@@ -71,7 +64,7 @@ class SplitCommand extends Command
             $input->getOption('cache-dir') ?: $this->rootDir.'/.monorepo-split-cache',
             $input->getOption('force-push'),
             $input->getArgument('branch-or-tag'),
-            $output
+            $output,
         );
 
         $splitter->split();
@@ -81,7 +74,7 @@ class SplitCommand extends Command
 
     private function addAuthToken($repoUrl): string
     {
-        if (($token = getenv('GITHUB_TOKEN')) && 0 === strncmp($repoUrl, 'https://github.com/', 19)) {
+        if (($token = getenv('GITHUB_TOKEN')) && str_starts_with($repoUrl, 'https://github.com/')) {
             return 'https://'.$token.'@github.com/'.substr($repoUrl, 19);
         }
 

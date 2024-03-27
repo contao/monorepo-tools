@@ -14,15 +14,9 @@ namespace Contao\MonorepoTools\Git;
 
 class Commit extends GitObject
 {
-    /**
-     * @var string
-     */
-    private $tree;
+    private string $tree;
 
-    /**
-     * @var array
-     */
-    private $parents = [];
+    private array $parents = [];
 
     public function __construct(string $rawCommit)
     {
@@ -33,9 +27,9 @@ class Commit extends GitObject
                 break;
             }
 
-            if (0 === strncmp($line, 'tree ', 5)) {
+            if (str_starts_with($line, 'tree ')) {
                 $this->tree = substr($line, 5, 40);
-            } elseif (0 === strncmp($line, 'parent ', 7)) {
+            } elseif (str_starts_with($line, 'parent ')) {
                 $this->parents[] = substr($line, 7, 40);
             }
         }
@@ -61,12 +55,12 @@ class Commit extends GitObject
                 break;
             }
 
-            if (0 === strncmp($line, 'committer ', 10)) {
+            if (str_starts_with($line, 'committer ')) {
                 $parts = explode(' ', $line);
 
                 $date = \DateTime::createFromFormat(
                     'U',
-                    $parts[\count($parts) - 2]
+                    $parts[\count($parts) - 2],
                 );
 
                 $date->setTimezone(new \DateTimeZone($parts[\count($parts) - 1]));
@@ -99,7 +93,7 @@ class Commit extends GitObject
                 break;
             }
 
-            if (0 === strncmp($line, 'gpgsig ', 7)) {
+            if (str_starts_with($line, 'gpgsig ')) {
                 return true;
             }
         }
@@ -128,7 +122,7 @@ class Commit extends GitObject
                 break;
             }
 
-            if (0 === strncmp($line, 'tree ', 5)) {
+            if (str_starts_with($line, 'tree ')) {
                 $raw[$num] = 'tree '.$hash;
                 break;
             }
@@ -146,11 +140,11 @@ class Commit extends GitObject
                 break;
             }
 
-            if (0 === strncmp($line, 'tree ', 5)) {
-                if (\count($hashes)) {
+            if (str_starts_with($line, 'tree ')) {
+                if ([] !== $hashes) {
                     $raw[$num] .= "\nparent ".implode("\nparent ", $hashes);
                 }
-            } elseif (0 === strncmp($line, 'parent ', 7)) {
+            } elseif (str_starts_with($line, 'parent ')) {
                 unset($raw[$num]);
             }
         }
@@ -179,7 +173,7 @@ class Commit extends GitObject
 
             $signatureStartFound = false;
 
-            if (0 === strncmp($line, 'gpgsig ', 7)) {
+            if (str_starts_with($line, 'gpgsig ')) {
                 $signatureStartFound = true;
                 unset($raw[$num]);
             }

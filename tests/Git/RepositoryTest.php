@@ -21,7 +21,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class RepositoryTest extends TestCase
 {
-    private $tmpDir;
+    private string $tmpDir;
 
     protected function setUp(): void
     {
@@ -54,7 +54,7 @@ class RepositoryTest extends TestCase
 
         $this->assertSame(
             '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
-            $repository->getTree('4b825dc642cb6eb9a060e54bf8d69288fbee4904')->getHash()
+            $repository->getTree('4b825dc642cb6eb9a060e54bf8d69288fbee4904')->getHash(),
         );
     }
 
@@ -86,15 +86,15 @@ class RepositoryTest extends TestCase
         $this->assertMatchesRegularExpression('/\[remote "remoteB"\]/', file_get_contents($this->tmpDir.'/repo/config'));
 
         $commit = $repository->getCommit(
-            $repository->commitTree('4b825dc642cb6eb9a060e54bf8d69288fbee4904', 'Commit')
+            $repository->commitTree('4b825dc642cb6eb9a060e54bf8d69288fbee4904', 'Commit'),
         );
         $commitA = new Commit(
             "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n"
-            ."committer Remote A <a@example.com> 1234567890 +0200\n\nCommit A"
+            ."committer Remote A <a@example.com> 1234567890 +0200\n\nCommit A",
         );
         $commitB = new Commit(
             "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n"
-            ."committer Remote B <b@example.com> 1234567890 +0200\n\nCommit B"
+            ."committer Remote B <b@example.com> 1234567890 +0200\n\nCommit B",
         );
 
         $this->assertSame($remoteA, $remoteA->addObject($commitA));
@@ -127,7 +127,7 @@ class RepositoryTest extends TestCase
                 'remoteA-tag/1.0.0' => $commitA->getHash(),
                 'remoteB-tag/1.0.0' => $commitB->getHash(),
             ],
-            $repository->getTags('')
+            $repository->getTags(''),
         );
 
         $mergeCommit = $repository->getCommit(
@@ -139,13 +139,13 @@ class RepositoryTest extends TestCase
                     $commitA->getHash(),
                     $commitB->getHash(),
                 ],
-                true
-            )
+                true,
+            ),
         );
 
         $this->assertSame(
-            $commit->getCommitterDate()->format(\DateTime::ISO8601),
-            $mergeCommit->getCommitterDate()->format(\DateTime::ISO8601)
+            $commit->getCommitterDate()->format(\DateTimeInterface::ISO8601),
+            $mergeCommit->getCommitterDate()->format(\DateTimeInterface::ISO8601),
         );
 
         $this->assertSame($repository, $repository->addBranch('main', $mergeCommit->getHash()));

@@ -14,14 +14,8 @@ namespace Contao\MonorepoTools\Git;
 
 abstract class GitObject
 {
-    /**
-     * @var string
-     */
-    private $raw;
-
-    public function __construct(string $rawData)
+    public function __construct(private readonly string $raw)
     {
-        $this->raw = $rawData;
     }
 
     public function getHash(): string

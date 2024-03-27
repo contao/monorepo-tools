@@ -20,8 +20,8 @@ class MonorepoConfiguration implements ConfigurationInterface
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('monorepo');
-        $rootNode = $treeBuilder->getRootNode();
 
+        $rootNode = $treeBuilder->getRootNode();
         $rootNode
             ->children()
                 ->scalarNode('monorepo_url')
@@ -30,11 +30,7 @@ class MonorepoConfiguration implements ConfigurationInterface
                 ->scalarNode('branch_filter')
                     ->isRequired()
                     ->validate()
-                        ->ifTrue(
-                            static function ($value) {
-                                return false === @preg_match($value, '');
-                            }
-                        )
+                        ->ifTrue(static fn ($value) => false === @preg_match($value, ''))
                         ->thenInvalid('Filter must be a valid RegEx %s given.')
                     ->end()
                 ->end()

@@ -39,7 +39,7 @@ class TreeTest extends TestCase
 
         $tree = new Tree(
             "40000 foo\0".hex2bin('4b825dc642cb6eb9a060e54bf8d69288fbee4904')
-            ."40000 bar\0".$randomTree
+            ."40000 bar\0".$randomTree,
         );
 
         $this->assertSame('4b825dc642cb6eb9a060e54bf8d69288fbee4904', $tree->getSubtreeHash('foo'));
@@ -67,7 +67,7 @@ class TreeTest extends TestCase
         new Tree($rawTree);
     }
 
-    public function getInvalidTrees()
+    public function getInvalidTrees(): \Generator
     {
         yield [' '];
         yield ['invalid'];

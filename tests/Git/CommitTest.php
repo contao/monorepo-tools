@@ -55,11 +55,11 @@ class CommitTest extends TestCase
     {
         $commit = new Commit(
             "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n"
-            ."committer John Doe <mail@example.com> 1532535229 +0200\n\n"
+            ."committer John Doe <mail@example.com> 1532535229 +0200\n\n",
         );
 
         $this->assertSame(1532535229, $commit->getCommitterDate()->getTimestamp());
-        $this->assertSame('2018-07-25T18:13:49+0200', $commit->getCommitterDate()->format(\DateTime::ISO8601));
+        $this->assertSame('2018-07-25T18:13:49+0200', $commit->getCommitterDate()->format(\DateTimeInterface::ISO8601));
 
         $this->expectException(\RuntimeException::class);
         $this->createEmptyCommit()->getCommitterDate();
@@ -82,7 +82,7 @@ class CommitTest extends TestCase
             "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n"
             ."gpgsig -----BEGIN PGP SIGNATURE-----\n"
             ." ...\n"
-            ." -----END PGP SIGNATURE-----\n\n"
+            ." -----END PGP SIGNATURE-----\n\n",
         );
 
         $this->assertTrue($commit->hasGpgSignature());
@@ -99,7 +99,7 @@ class CommitTest extends TestCase
     {
         $this->assertSame(
             "commit 47\0tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\n",
-            gzuncompress($this->createEmptyCommit()->getGitObjectBytes())
+            gzuncompress($this->createEmptyCommit()->getGitObjectBytes()),
         );
     }
 
