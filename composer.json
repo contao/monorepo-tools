@@ -22,6 +22,7 @@
         "symfony/yaml": "^5.4 || ^6.4 || ^7.0"
     },
     "require-dev": {
+        "ausi/remote-git": "^0.2.5",
         "contao/code-quality": "^1.0",
         "phpstan/phpstan": "^1.0",
         "phpstan/phpstan-symfony": "^1.0",
