@@ -33,10 +33,9 @@ Usage
 
 How the tools are used in action
 can be seen in the *monorepo.yml* and *.github/workflows/ci.yml* files
-of the projects [Contao] and [BoringSearch].
+of the project [Contao].
 
 [Contao]: https://github.com/contao/contao
-[BoringSearch]: https://github.com/BoringSearch/BoringSearch
 
 ### Split command
 
