@@ -221,6 +221,9 @@ class ComposerJsonCommand extends Command
                 ],
                 $jsons,
             ))),
+            ...array_values($this->config['composer']['require']),
+            ...array_values($this->config['composer']['require-dev']),
+            ...array_values($this->config['composer']['conflict']),
         ]);
 
         $rootJson['replace'] = array_combine(
