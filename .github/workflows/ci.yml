@@ -11,6 +11,33 @@ on:
         - cron: 0 13 * * MON,THU
 
 jobs:
+    coverage:
+        name: Coverage
+        runs-on: ubuntu-latest
+        if: github.event_name != 'schedule'
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.1
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo, zlib
+                  coverage: pcov
+
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Install the dependencies
+              run: composer install --no-interaction --no-suggest
+
+            - name: Generate the coverage report
+              run: php -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover=clover.xml --colors=always
+
+            - name: Upload the coverage report
+              uses: codecov/codecov-action@v3
+              with:
+                  files: ./clover.xml
+                  fail_ci_if_error: true
+
     coding-style:
         name: Coding Style
         runs-on: ubuntu-latest
@@ -21,7 +48,6 @@ jobs:
               with:
                   php-version: 8.1
                   extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo, zlib
-                  tools: prestissimo, flex
                   coverage: none
 
             - name: Checkout
@@ -53,7 +79,6 @@ jobs:
               with:
                   php-version: ${{ matrix.php }}
                   extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo_mysql, zlib
-                  tools: prestissimo, flex
                   coverage: none
 
             - name: Checkout
@@ -76,7 +101,6 @@ jobs:
               with:
                   php-version: ${{ matrix.php }}
                   extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo_mysql, zlib
-                  tools: prestissimo, flex
                   coverage: none
 
             - name: Checkout
@@ -98,7 +122,6 @@ jobs:
               with:
                   php-version: 8.1
                   extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo_mysql, zlib
-                  tools: prestissimo, flex
                   coverage: none
 
             - name: Checkout
