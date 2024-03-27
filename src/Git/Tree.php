@@ -14,10 +14,7 @@ namespace Contao\MonorepoTools\Git;
 
 class Tree extends GitObject
 {
-    /**
-     * @var array
-     */
-    private $entries = [];
+    private array $entries = [];
 
     public function __construct(string $rawTree)
     {

@@ -50,12 +50,14 @@
     },
     "scripts": {
         "all": [
+            "@rector",
             "@ecs",
             "@unit-tests",
             "@phpstan"
         ],
         "ecs": "@php vendor/bin/ecs check --fix --ansi",
         "phpstan": "@php vendor/bin/phpstan analyze  --ansi",
+        "rector": "@php vendor/bin/rector --ansi",
         "unit-tests": "@php vendor/bin/phpunit --colors=always"
     }
 }

@@ -20,71 +20,30 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Splitter
 {
-    /**
-     * @var string
-     */
-    private $monorepoUrl;
+    private readonly string $objectsCachePath;
 
-    /**
-     * @var string
-     */
-    private $branchFilter;
-
-    /**
-     * @var array
-     */
-    private $repoUrlsByFolder;
-
-    /**
-     * @var string
-     */
-    private $cacheDir;
-
-    /**
-     * @var bool
-     */
-    private $forcePush;
-
-    /**
-     * @var string|null
-     */
-    private $branchOrTag;
-
-    /**
-     * @var string
-     */
-    private $objectsCachePath;
-
-    /**
-     * @var Repository
-     */
-    private $repository;
-
-    /**
-     * @var OutputInterface
-     */
-    private $output;
+    private Repository $repository;
 
     /**
      * @var array<string, Commit>
      */
-    private $commitCache = [];
+    private array $commitCache = [];
 
     /**
-     * @var array<string, Tree>
+     * @var array array<string, Tree>
      */
-    private $treeCache = [];
+    private array $treeCache = [];
 
-    public function __construct(string $monorepoUrl, string $branchFilter, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, string|null $branchOrTag, OutputInterface $output)
-    {
-        $this->monorepoUrl = $monorepoUrl;
-        $this->branchFilter = $branchFilter;
-        $this->repoUrlsByFolder = $repoUrlsByFolder;
-        $this->cacheDir = $cacheDir;
+    public function __construct(
+        private readonly string $monorepoUrl,
+        private readonly string $branchFilter,
+        private readonly array $repoUrlsByFolder,
+        private readonly string $cacheDir,
+        private readonly bool $forcePush,
+        private readonly string|null $branchOrTag,
+        private readonly OutputInterface $output,
+    ) {
         $this->objectsCachePath = $cacheDir.'/objects-v1.cache';
-        $this->forcePush = $forcePush;
-        $this->branchOrTag = $branchOrTag;
-        $this->output = $output;
 
         if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
             throw new \RuntimeException(sprintf('Unable to create directory %s', $cacheDir));
@@ -145,7 +104,7 @@ class Splitter
         if (null !== $this->branchOrTag) {
             if (isset($branchCommits[$this->branchOrTag])) {
                 if (!preg_match($this->branchFilter, $this->branchOrTag)) {
-                    $this->output->writeln("\nBranch {$this->branchOrTag} does not match the branch filter {$this->branchFilter}.");
+                    $this->output->writeln("\nBranch $this->branchOrTag does not match the branch filter $this->branchFilter.");
 
                     return;
                 }
@@ -158,7 +117,7 @@ class Splitter
                         ->fetchTag($this->branchOrTag, 'mono', 'remote/mono/')
                         ->getTag('remote/mono/'.$this->branchOrTag)
                     ;
-                } catch (\Exception $e) {
+                } catch (\Exception) {
                     throw new InvalidArgumentException(sprintf('Branch or tag %s does not exist, use one of %s', $this->branchOrTag, implode(', ', array_keys($branchCommits))));
                 }
 
@@ -172,16 +131,16 @@ class Splitter
                 }
             }
 
-            if (!\count($branchCommits)) {
+            if ([] === $branchCommits) {
                 throw new \RuntimeException(sprintf('No branch matching the filter %s found.', $this->branchFilter));
             }
         }
 
         $this->output->writeln("\nRead commits...");
 
-        $commitObjects = $this->readCommits(array_merge(array_values($branchCommits), array_values($tagCommits)));
+        $commitObjects = $this->readCommits([...array_values($branchCommits), ...array_values($tagCommits)]);
 
-        if (empty($commitObjects)) {
+        if ([] === $commitObjects) {
             throw new \RuntimeException(sprintf('No commits found for: %s %s', print_r($branchCommits, true), print_r($tagCommits, true)));
         }
 
@@ -189,14 +148,14 @@ class Splitter
 
         $hashMapping = $this->splitCommits($commitObjects, $this->repoUrlsByFolder);
 
-        if (empty($hashMapping)) {
+        if ([] === $hashMapping) {
             throw new \RuntimeException(sprintf('No hash mapping for commits: %s', print_r($commitObjects, true)));
         }
 
         $pushBranches = [];
         $pushTags = [];
 
-        if (\count($branchCommits)) {
+        if ([] !== $branchCommits) {
             $this->output->writeln("\nCreate branches...");
 
             foreach ($branchCommits as $branch => $commit) {
@@ -209,7 +168,7 @@ class Splitter
             }
         }
 
-        if (\count($tagCommits)) {
+        if ([] !== $tagCommits) {
             $this->output->writeln("\nCreate tags...");
 
             foreach ($tagCommits as $tag => $commit) {
@@ -277,7 +236,7 @@ class Splitter
                 $missingParents[] = $parent;
             }
 
-            if (\count($missingParents)) {
+            if ([] !== $missingParents) {
                 $pending[] = $current;
 
                 foreach ($missingParents as $parent) {

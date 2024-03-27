@@ -21,7 +21,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class RepositoryTest extends TestCase
 {
-    private $tmpDir;
+    private string $tmpDir;
 
     protected function setUp(): void
     {
@@ -144,8 +144,8 @@ class RepositoryTest extends TestCase
         );
 
         $this->assertSame(
-            $commit->getCommitterDate()->format(\DateTime::ISO8601),
-            $mergeCommit->getCommitterDate()->format(\DateTime::ISO8601),
+            $commit->getCommitterDate()->format(\DateTimeInterface::ISO8601),
+            $mergeCommit->getCommitterDate()->format(\DateTimeInterface::ISO8601),
         );
 
         $this->assertSame($repository, $repository->addBranch('main', $mergeCommit->getHash()));

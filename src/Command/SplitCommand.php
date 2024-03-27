@@ -24,15 +24,8 @@ use Symfony\Component\Yaml\Yaml;
 
 class SplitCommand extends Command
 {
-    /**
-     * @var string
-     */
-    private $rootDir;
-
-    public function __construct(string $rootDir)
+    public function __construct(private readonly string $rootDir)
     {
-        $this->rootDir = $rootDir;
-
         parent::__construct();
     }
 
@@ -81,7 +74,7 @@ class SplitCommand extends Command
 
     private function addAuthToken($repoUrl): string
     {
-        if (($token = getenv('GITHUB_TOKEN')) && 0 === strncmp($repoUrl, 'https://github.com/', 19)) {
+        if (($token = getenv('GITHUB_TOKEN')) && str_starts_with($repoUrl, 'https://github.com/')) {
             return 'https://'.$token.'@github.com/'.substr($repoUrl, 19);
         }
 

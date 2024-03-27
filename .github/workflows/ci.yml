@@ -8,7 +8,7 @@ on:
         tags:
             - '*'
     schedule:
-        - cron: 0 13 * * MON,TUE
+        - cron: 0 13 * * MON,THU
 
 jobs:
     coding-style:
@@ -30,10 +30,13 @@ jobs:
             - name: Install the dependencies
               run: composer install --no-interaction --no-suggest
 
-            - name: Check the coding style
+            - name: Run Rector
+              run: vendor/bin/rector --dry-run --no-progress-bar --ansi
+
+            - name: Run ECS
               run: vendor/bin/ecs check --no-progress-bar --ansi
 
-            - name: Analyze the code
+            - name: Run PHPStan
               run: vendor/bin/phpstan analyse --no-progress
 
     tests:

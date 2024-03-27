@@ -19,15 +19,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class MergeCommand extends Command
 {
-    /**
-     * @var string
-     */
-    private $rootDir;
-
-    public function __construct(string $rootDir)
+    public function __construct(private readonly string $rootDir)
     {
-        $this->rootDir = $rootDir;
-
         parent::__construct();
     }
 

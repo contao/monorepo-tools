@@ -59,7 +59,7 @@ class CommitTest extends TestCase
         );
 
         $this->assertSame(1532535229, $commit->getCommitterDate()->getTimestamp());
-        $this->assertSame('2018-07-25T18:13:49+0200', $commit->getCommitterDate()->format(\DateTime::ISO8601));
+        $this->assertSame('2018-07-25T18:13:49+0200', $commit->getCommitterDate()->format(\DateTimeInterface::ISO8601));
 
         $this->expectException(\RuntimeException::class);
         $this->createEmptyCommit()->getCommitterDate();

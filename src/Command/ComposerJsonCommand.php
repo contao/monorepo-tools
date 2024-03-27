@@ -27,30 +27,20 @@ use Symfony\Component\Yaml\Yaml;
 
 class ComposerJsonCommand extends Command
 {
-    /**
-     * @var string
-     */
-    private $rootDir;
-
-    /**
-     * @var array
-     */
-    private $config;
+    private array $config;
 
     /**
      * @var array<string, array<string, string>>
      */
-    private $replacedPackages = [];
+    private array $replacedPackages = [];
 
     /**
      * @var array<string, string>
      */
-    private $prettyVersionConstraints = [];
+    private array $prettyVersionConstraints = [];
 
-    public function __construct(string $rootDir)
+    public function __construct(private readonly string $rootDir)
     {
-        $this->rootDir = $rootDir;
-
         parent::__construct();
     }
 
@@ -83,7 +73,7 @@ class ComposerJsonCommand extends Command
         if ($input->getOption('validate')) {
             $invalid = $this->validateJsons($rootJson, $splitJsons);
 
-            if (0 === \count($invalid)) {
+            if ([] === $invalid) {
                 $io->success('All composer.json files are up to date.');
 
                 return 0;
@@ -108,7 +98,7 @@ class ComposerJsonCommand extends Command
 
         $updated = $this->updateJsons($rootJson, $splitJsons);
 
-        if (0 === \count($updated)) {
+        if ([] === $updated) {
             $io->success('All composer.json files are up to date.');
 
             return 0;
@@ -219,21 +209,19 @@ class ComposerJsonCommand extends Command
             array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories'])),
         );
 
-        $this->cachePrettyVersionConstraints(array_merge(
-            array_values($rootJson['require'] ?? []),
-            array_values($rootJson['require-dev'] ?? []),
-            array_values($rootJson['conflict'] ?? []),
-            array_merge(...array_values(array_map(
-                static function ($json) {
-                    return array_merge(
-                        array_values($json['require'] ?? []),
-                        array_values($json['require-dev'] ?? []),
-                        array_values($json['conflict'] ?? []),
-                    );
-                },
+        $this->cachePrettyVersionConstraints([
+            ...array_values($rootJson['require'] ?? []),
+            ...array_values($rootJson['require-dev'] ?? []),
+            ...array_values($rootJson['conflict'] ?? []),
+            ...array_merge(...array_values(array_map(
+                static fn ($json) => [
+                    ...array_values($json['require'] ?? []),
+                    ...array_values($json['require-dev'] ?? []),
+                    ...array_values($json['conflict'] ?? []),
+                ],
                 $jsons,
             ))),
-        ));
+        ]);
 
         $rootJson['replace'] = array_combine(
             array_map(
@@ -249,24 +237,24 @@ class ComposerJsonCommand extends Command
         ksort($rootJson['replace']);
 
         $rootJson['require'] = $this->combineDependecies(
-            array_merge(
-                array_map(
+            [
+                ...array_map(
                     static fn ($json) => $json['require'] ?? [],
                     $jsons,
                 ),
-                [$this->config['composer']['require'] ?? []],
-            ),
+                $this->config['composer']['require'] ?? [],
+            ],
             array_keys($rootJson['replace']),
         );
 
         $rootJson['require-dev'] = $this->combineDependecies(
-            array_merge(
-                array_map(
+            [
+                ...array_map(
                     static fn ($json) => $json['require-dev'] ?? [],
                     $jsons,
                 ),
-                [$this->config['composer']['require-dev'] ?? []],
-            ),
+                $this->config['composer']['require-dev'] ?? [],
+            ],
             array_keys($rootJson['replace']),
         );
 
@@ -277,7 +265,6 @@ class ComposerJsonCommand extends Command
                         $rootJson['require-dev'][$packageName],
                         $versionConstraint,
                     ],
-                    $packageName,
                 );
 
                 unset($rootJson['require-dev'][$packageName]);
@@ -285,13 +272,13 @@ class ComposerJsonCommand extends Command
         }
 
         $rootJson['conflict'] = $this->combineDependecies(
-            array_merge(
-                array_map(
+            [
+                ...array_map(
                     static fn ($json) => $json['conflict'] ?? [],
                     $jsons,
                 ),
-                [$this->config['composer']['conflict'] ?? []],
-            ),
+                $this->config['composer']['conflict'] ?? [],
+            ],
             array_keys($rootJson['replace']),
             false,
         );
@@ -306,30 +293,30 @@ class ComposerJsonCommand extends Command
         $rootJson['extra']['contao-manager-plugin'] = $this->combineManagerPlugins($jsons);
 
         $rootJson['autoload'] = $this->combineAutoload(
-            array_merge(
-                array_map(
+            [
+                ...array_map(
                     static fn ($json) => $json['autoload'] ?? [],
                     $jsons,
                 ),
-                ['' => $this->config['composer']['autoload'] ?? []],
-            ),
+                '' => $this->config['composer']['autoload'] ?? [],
+            ],
             $rootJson['autoload'] ?? null,
         );
 
         $rootJson['autoload-dev'] = $this->combineAutoload(
-            array_merge(
-                array_map(
+            [
+                ...array_map(
                     static fn ($json) => $json['autoload-dev'] ?? [],
                     $jsons,
                 ),
-                ['' => $this->config['composer']['autoload-dev'] ?? []],
-            ),
+                '' => $this->config['composer']['autoload-dev'] ?? [],
+            ],
             $rootJson['autoload-dev'] ?? null,
         );
 
         // Remove empty arrays
         foreach ($rootJson as $key => $value) {
-            if (\is_array($value) && 0 === \count($value)) {
+            if ([] === $value) {
                 unset($rootJson[$key]);
             }
         }
@@ -366,7 +353,7 @@ class ComposerJsonCommand extends Command
         }
 
         foreach ($requires as $packageName => $constraints) {
-            $requires[$packageName] = $this->combineConstraints($constraints, $packageName, $conjunctive);
+            $requires[$packageName] = $this->combineConstraints($constraints, $conjunctive);
         }
 
         uksort(
@@ -381,15 +368,15 @@ class ComposerJsonCommand extends Command
                 }
 
                 if (
-                    (0 === strncmp($a, 'ext-', 4) && 0 !== strncmp($b, 'ext-', 4))
-                    || (0 === strncmp($a, 'lib-', 4) && 0 !== strncmp($b, 'lib-', 4))
+                    (str_starts_with($a, 'ext-') && !str_starts_with($b, 'ext-'))
+                    || (str_starts_with($a, 'lib-') && !str_starts_with($b, 'lib-'))
                 ) {
                     return -1;
                 }
 
                 if (
-                    (0 !== strncmp($a, 'ext-', 4) && 0 === strncmp($b, 'ext-', 4))
-                    || (0 !== strncmp($a, 'lib-', 4) && 0 === strncmp($b, 'lib-', 4))
+                    (!str_starts_with($a, 'ext-') && str_starts_with($b, 'ext-'))
+                    || (!str_starts_with($a, 'lib-') && str_starts_with($b, 'lib-'))
                 ) {
                     return 1;
                 }
@@ -409,7 +396,7 @@ class ComposerJsonCommand extends Command
         return $requires;
     }
 
-    private function combineConstraints(array $constraints, string $name, bool $conjunctive = true): string
+    private function combineConstraints(array $constraints, bool $conjunctive = true): string
     {
         $parsedConstraints = [];
         $versionParser = new VersionParser();
@@ -420,11 +407,7 @@ class ComposerJsonCommand extends Command
 
         $compact = (string) Intervals::compactConstraint(MultiConstraint::create($parsedConstraints, $conjunctive));
 
-        if (isset($this->prettyVersionConstraints[$compact])) {
-            return $this->prettyVersionConstraints[$compact];
-        }
-
-        return str_replace(['[', ']'], '', $compact);
+        return $this->prettyVersionConstraints[$compact] ?? str_replace(['[', ']'], '', $compact);
     }
 
     /**

@@ -19,20 +19,10 @@ use Symfony\Component\Process\Process;
 
 class Repository
 {
-    /**
-     * @var string
-     */
-    private $path;
-
-    /**
-     * @var OutputInterface
-     */
-    private $output;
-
-    public function __construct(string $path, OutputInterface $output)
-    {
-        $this->path = $path;
-        $this->output = $output;
+    public function __construct(
+        private readonly string $path,
+        private readonly OutputInterface $output,
+    ) {
     }
 
     public function init(): self
@@ -138,7 +128,7 @@ class Repository
         foreach ($this->run(['git', '--git-dir='.$this->path, 'branch', '-r']) as $branch) {
             $branch = trim($branch);
 
-            if ('' === $branch || 0 !== strncmp($branch, $remote.'/', \strlen($remote.'/'))) {
+            if ('' === $branch || !str_starts_with($branch, $remote.'/')) {
                 continue;
             }
 
@@ -172,7 +162,7 @@ class Repository
     {
         $result = $this->run(['git', '--git-dir='.$this->path, 'rev-list', '-n', '1', $tag]);
 
-        if (!\count($result) || 40 !== \strlen($result[0])) {
+        if ([] === $result || 40 !== \strlen($result[0])) {
             throw new \RuntimeException(sprintf('Tag %s not found.', $tag));
         }
 

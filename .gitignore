@@ -4,6 +4,7 @@
 
 # Monorepo Tools
 /.monorepo-split-cache/
+/.monorepo-merge-cache/
 
 # PhpUnit
 /.phpunit.result.cache
