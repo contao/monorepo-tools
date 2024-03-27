@@ -105,7 +105,9 @@ class SplitCommandTest extends TestCase
 
         $monoGit = ['-C', Path::join($this->tmpDir, 'monorepo-1')];
 
-        $git->execute([...$monoGit, 'init']);
+        $git->execute([...$monoGit, 'init', '--initial-branch', 'main']);
+        $git->execute([...$monoGit, 'config', 'user.name', 'Mono Repo']);
+        $git->execute([...$monoGit, 'config', 'user.email', 'mono@example.com']);
         $git->execute([...$monoGit, 'add', '--all']);
         $git->execute([...$monoGit, 'commit', '-m', 'Initial']);
 
@@ -135,8 +137,8 @@ class SplitCommandTest extends TestCase
         $this->assertSame("foo\nadded", $git->execute(['show', 'main:src/foo.txt'], $gitDirs['foo']));
         $this->assertSame("bar\nadded", $git->execute(['show', 'main:src/bar.txt'], $gitDirs['bar']));
 
-        $this->assertSame("* main\n", $git->execute(['branch'], $gitDirs['foo']), 'Only configured branches should get split');
-        $this->assertSame("* main\n", $git->execute(['branch'], $gitDirs['bar']), 'Only configured branches should get split');
+        $this->assertSame('main', trim($git->execute(['branch'], $gitDirs['foo']), " \n*"), 'Only configured branches should get split');
+        $this->assertSame('main', trim($git->execute(['branch'], $gitDirs['bar']), " \n*"), 'Only configured branches should get split');
 
         (new Process(
             [Path::join(__DIR__, '../../bin/monorepo-tools'), 'composer-json'],
