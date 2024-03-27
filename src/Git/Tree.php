@@ -47,14 +47,12 @@ class Tree extends GitObject
     public static function createFromTrees(array $trees): self
     {
         return new self(implode('', array_map(
-            static function (self $tree) {
-                return $tree->getRaw();
-            },
-            $trees
+            static fn (self $tree) => $tree->getRaw(),
+            $trees,
         )));
     }
 
-    public function getSubtreeHash(string $folderName): ?string
+    public function getSubtreeHash(string $folderName): string|null
     {
         return $this->entries[$folderName] ?? null;
     }

@@ -66,7 +66,7 @@ class Commit extends GitObject
 
                 $date = \DateTime::createFromFormat(
                     'U',
-                    $parts[\count($parts) - 2]
+                    $parts[\count($parts) - 2],
                 );
 
                 $date->setTimezone(new \DateTimeZone($parts[\count($parts) - 1]));

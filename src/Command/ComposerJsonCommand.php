@@ -71,9 +71,9 @@ class ComposerJsonCommand extends Command
                 Yaml::parse(file_get_contents(
                     file_exists($this->rootDir.'/monorepo-split.yml')
                         ? $this->rootDir.'/monorepo-split.yml'
-                        : $this->rootDir.'/monorepo.yml'
+                        : $this->rootDir.'/monorepo.yml',
                 )),
-            ]
+            ],
         );
 
         $io = new SymfonyStyle($input, $output);
@@ -90,10 +90,8 @@ class ComposerJsonCommand extends Command
             }
 
             $files = array_map(
-                function ($path) {
-                    return str_replace($this->rootDir.'/', '', $path);
-                },
-                array_keys($invalid)
+                fn ($path) => str_replace($this->rootDir.'/', '', $path),
+                array_keys($invalid),
             );
 
             $io->error('The following files are not up to date: '.implode(',', $files));
@@ -117,10 +115,8 @@ class ComposerJsonCommand extends Command
         }
 
         $files = array_map(
-            function ($path) {
-                return str_replace($this->rootDir.'/', '', $path);
-            },
-            array_keys($updated)
+            fn ($path) => str_replace($this->rootDir.'/', '', $path),
+            array_keys($updated),
         );
 
         $io->success('The following files have been updated: '.implode(',', $files));
@@ -135,12 +131,10 @@ class ComposerJsonCommand extends Command
     {
         $jsonsByPath = array_combine(
             array_map(
-                function ($folder) {
-                    return $this->rootDir.'/'.$folder.'/composer.json';
-                },
-                array_keys($splitJsons)
+                fn ($folder) => $this->rootDir.'/'.$folder.'/composer.json',
+                array_keys($splitJsons),
             ),
-            array_values($splitJsons)
+            array_values($splitJsons),
         );
 
         $jsonsByPath[$this->rootDir.'/composer.json'] = $rootJson;
@@ -222,7 +216,7 @@ class ComposerJsonCommand extends Command
 
                 return json_decode(file_get_contents($path), true);
             },
-            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
+            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories'])),
         );
 
         $this->cachePrettyVersionConstraints(array_merge(
@@ -237,23 +231,19 @@ class ComposerJsonCommand extends Command
                         array_values($json['conflict'] ?? []),
                     );
                 },
-                $jsons
+                $jsons,
             ))),
         ));
 
         $rootJson['replace'] = array_combine(
             array_map(
-                static function ($json) {
-                    return $json['name'];
-                },
-                $jsons
+                static fn ($json) => $json['name'],
+                $jsons,
             ),
             array_map(
-                static function () {
-                    return 'self.version';
-                },
-                $jsons
-            )
+                static fn () => 'self.version',
+                $jsons,
+            ),
         );
 
         ksort($rootJson['replace']);
@@ -261,27 +251,23 @@ class ComposerJsonCommand extends Command
         $rootJson['require'] = $this->combineDependecies(
             array_merge(
                 array_map(
-                    static function ($json) {
-                        return $json['require'] ?? [];
-                    },
-                    $jsons
+                    static fn ($json) => $json['require'] ?? [],
+                    $jsons,
                 ),
-                [$this->config['composer']['require'] ?? []]
+                [$this->config['composer']['require'] ?? []],
             ),
-            array_keys($rootJson['replace'])
+            array_keys($rootJson['replace']),
         );
 
         $rootJson['require-dev'] = $this->combineDependecies(
             array_merge(
                 array_map(
-                    static function ($json) {
-                        return $json['require-dev'] ?? [];
-                    },
-                    $jsons
+                    static fn ($json) => $json['require-dev'] ?? [],
+                    $jsons,
                 ),
-                [$this->config['composer']['require-dev'] ?? []]
+                [$this->config['composer']['require-dev'] ?? []],
             ),
-            array_keys($rootJson['replace'])
+            array_keys($rootJson['replace']),
         );
 
         foreach ($rootJson['require'] as $packageName => $versionConstraint) {
@@ -291,7 +277,7 @@ class ComposerJsonCommand extends Command
                         $rootJson['require-dev'][$packageName],
                         $versionConstraint,
                     ],
-                    $packageName
+                    $packageName,
                 );
 
                 unset($rootJson['require-dev'][$packageName]);
@@ -301,24 +287,20 @@ class ComposerJsonCommand extends Command
         $rootJson['conflict'] = $this->combineDependecies(
             array_merge(
                 array_map(
-                    static function ($json) {
-                        return $json['conflict'] ?? [];
-                    },
-                    $jsons
+                    static fn ($json) => $json['conflict'] ?? [],
+                    $jsons,
                 ),
-                [$this->config['composer']['conflict'] ?? []]
+                [$this->config['composer']['conflict'] ?? []],
             ),
             array_keys($rootJson['replace']),
-            false
+            false,
         );
 
         $rootJson['bin'] = $this->combineBins(
             array_map(
-                static function ($json) {
-                    return $json['bin'] ?? [];
-                },
-                $jsons
-            )
+                static fn ($json) => $json['bin'] ?? [],
+                $jsons,
+            ),
         );
 
         $rootJson['extra']['contao-manager-plugin'] = $this->combineManagerPlugins($jsons);
@@ -326,27 +308,23 @@ class ComposerJsonCommand extends Command
         $rootJson['autoload'] = $this->combineAutoload(
             array_merge(
                 array_map(
-                    static function ($json) {
-                        return $json['autoload'] ?? [];
-                    },
-                    $jsons
+                    static fn ($json) => $json['autoload'] ?? [],
+                    $jsons,
                 ),
-                ['' => $this->config['composer']['autoload'] ?? []]
+                ['' => $this->config['composer']['autoload'] ?? []],
             ),
-            $rootJson['autoload'] ?? null
+            $rootJson['autoload'] ?? null,
         );
 
         $rootJson['autoload-dev'] = $this->combineAutoload(
             array_merge(
                 array_map(
-                    static function ($json) {
-                        return $json['autoload-dev'] ?? [];
-                    },
-                    $jsons
+                    static fn ($json) => $json['autoload-dev'] ?? [],
+                    $jsons,
                 ),
-                ['' => $this->config['composer']['autoload-dev'] ?? []]
+                ['' => $this->config['composer']['autoload-dev'] ?? []],
             ),
-            $rootJson['autoload-dev'] ?? null
+            $rootJson['autoload-dev'] ?? null,
         );
 
         // Remove empty arrays
@@ -416,16 +394,16 @@ class ComposerJsonCommand extends Command
                     return 1;
                 }
 
-                if (false === strpos($a, '/') && false !== strpos($b, '/')) {
+                if (!str_contains($a, '/') && str_contains($b, '/')) {
                     return -1;
                 }
 
-                if (false === strpos($b, '/') && false !== strpos($a, '/')) {
+                if (!str_contains($b, '/') && str_contains($a, '/')) {
                     return 1;
                 }
 
                 return strcmp($a, $b);
-            }
+            },
         );
 
         return $requires;
@@ -462,7 +440,7 @@ class ComposerJsonCommand extends Command
             }
 
             $normalized = (string) Intervals::compactConstraint(
-                MultiConstraint::create([$versionParser->parseConstraints($constraint)])
+                MultiConstraint::create([$versionParser->parseConstraints($constraint)]),
             );
 
             if (isset($this->prettyVersionConstraints[$normalized])) {
@@ -500,7 +478,7 @@ class ComposerJsonCommand extends Command
 
                 return $json['extra']['contao-manager-plugin'];
             },
-            array_values($jsons)
+            array_values($jsons),
         ));
 
         ksort($plugins);
@@ -508,7 +486,7 @@ class ComposerJsonCommand extends Command
         return $plugins;
     }
 
-    private function combineAutoload(array $autoloadConfigs, array $currentAutoload = null): array
+    private function combineAutoload(array $autoloadConfigs, array|null $currentAutoload = null): array
     {
         $returnAutoload = \is_array($currentAutoload)
             ? array_combine(array_keys($currentAutoload), array_fill(0, \count($currentAutoload), []))
@@ -574,7 +552,7 @@ class ComposerJsonCommand extends Command
 
                 return json_decode(file_get_contents($path), true);
             },
-            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories']))
+            array_combine(array_keys($this->config['repositories']), array_keys($this->config['repositories'])),
         );
 
         $jsons = array_map(
@@ -587,14 +565,12 @@ class ComposerJsonCommand extends Command
 
                 return $json;
             },
-            $jsons
+            $jsons,
         );
 
         return array_map(
-            static function ($json) {
-                return json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n";
-            },
-            $jsons
+            static fn ($json) => json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n",
+            $jsons,
         );
     }
 }

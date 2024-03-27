@@ -55,7 +55,7 @@ class MergeCommand extends Command
             ],
             [],
             $this->rootDir.'/.monorepo-merge-cache',
-            $output
+            $output,
         );
 
         $merger->merge();

@@ -126,12 +126,10 @@ class Merger
                     $this->combineTrees($treeByFolder),
                     'Merge the bundles into the '.$branch.' branch.',
                     array_filter(array_map(
-                        static function ($commits) use ($branch) {
-                            return $commits['branches'][$branch] ?? null;
-                        },
-                        $mainCommits
-                    ))
-                )
+                        static fn ($commits) => $commits['branches'][$branch] ?? null,
+                        $mainCommits,
+                    )),
+                ),
             );
         }
 
@@ -162,10 +160,10 @@ class Merger
                             return $commits['tags'][$tag];
                         },
                         $mainCommits,
-                        array_keys($mainCommits)
+                        array_keys($mainCommits),
                     )),
-                    true
-                )
+                    true,
+                ),
             );
         }
 
@@ -309,8 +307,8 @@ class Merger
                             ? null
                             : $hashMapping[$parentHash];
                     },
-                    $oldCommit->getParentHashes()
-                ))
+                    $oldCommit->getParentHashes(),
+                )),
             )
         ;
 

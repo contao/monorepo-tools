@@ -75,7 +75,7 @@ class Splitter
      */
     private $treeCache = [];
 
-    public function __construct(string $monorepoUrl, string $branchFilter, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, ?string $branchOrTag, OutputInterface $output)
+    public function __construct(string $monorepoUrl, string $branchFilter, array $repoUrlsByFolder, string $cacheDir, bool $forcePush, string|null $branchOrTag, OutputInterface $output)
     {
         $this->monorepoUrl = $monorepoUrl;
         $this->branchFilter = $branchFilter;
@@ -98,7 +98,7 @@ class Splitter
 
             [$this->commitCache, $this->treeCache] = unserialize(
                 file_get_contents($this->objectsCachePath),
-                [Commit::class, Tree::class]
+                [Commit::class, Tree::class],
             );
         }
 

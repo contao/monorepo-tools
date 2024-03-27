@@ -19,7 +19,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: 7.4
+                  php-version: 8.1
                   extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo, zlib
                   tools: prestissimo, flex
                   coverage: none
@@ -43,7 +43,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                php: [7.4, 8.0, 8.1, 8.2, 8.3, 8.4]
+                php: [8.1, 8.2, 8.3]
         steps:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -62,6 +62,29 @@ jobs:
             - name: Run the unit tests
               run: vendor/bin/phpunit --colors=always
 
+    nightly:
+        name: PHP 8.4
+        runs-on: ubuntu-latest
+        if: github.event_name != 'push'
+        continue-on-error: true
+        steps:
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo_mysql, zlib
+                  tools: prestissimo, flex
+                  coverage: none
+
+            - name: Checkout
+              uses: actions/checkout@v3
+
+            - name: Install the dependencies
+              run: composer install --ignore-platform-req=php+ --no-interaction --no-suggest
+
+            - name: Run the unit tests
+              run: vendor/bin/phpunit --colors=always
+
     prefer-lowest:
         name: Prefer Lowest
         runs-on: ubuntu-latest
@@ -70,7 +93,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: 7.4
+                  php-version: 8.1
                   extensions: dom, fileinfo, filter, gd, hash, intl, json, mbstring, pcre, pdo_mysql, zlib
                   tools: prestissimo, flex
                   coverage: none

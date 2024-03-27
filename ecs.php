@@ -10,12 +10,7 @@ declare(strict_types=1);
  * @license LGPL-3.0-or-later
  */
 
-use Contao\CodeQuality\Fixer\TypeHintOrderFixer;
-use PhpCsFixer\Fixer\Alias\ModernizeStrposFixer;
 use PhpCsFixer\Fixer\Comment\HeaderCommentFixer;
-use PhpCsFixer\Fixer\ControlStructure\TrailingCommaInMultilineFixer;
-use PhpCsFixer\Fixer\FunctionNotation\NullableTypeDeclarationForDefaultNullValueFixer;
-use PhpCsFixer\Fixer\FunctionNotation\UseArrowFunctionsFixer;
 use PhpCsFixer\Fixer\Operator\NoUselessConcatOperatorFixer;
 use PhpCsFixer\Fixer\Whitespace\MethodChainingIndentationFixer;
 use Symplify\EasyCodingStandard\Config\ECSConfig;
@@ -34,12 +29,6 @@ return ECSConfig::configure()
         NoUselessConcatOperatorFixer::class => [
             'tests/Git/TreeTest.php',
         ],
-        // TODO: enable the following once PHP 8.1 is the minimum requirement
-        ModernizeStrposFixer::class,
-        NullableTypeDeclarationForDefaultNullValueFixer::class,
-        TrailingCommaInMultilineFixer::class,
-        TypeHintOrderFixer::class,
-        UseArrowFunctionsFixer::class,
     ])
     ->withParallel()
     ->withSpacing(Option::INDENTATION_SPACES, "\n")

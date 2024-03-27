@@ -92,11 +92,9 @@ class Repository
     {
         $this->executeConcurrent(
             array_map(
-                function ($remote) {
-                    return ['git', '--git-dir='.$this->path, 'fetch', '--no-tags', $remote];
-                },
-                $remotes
-            )
+                fn ($remote) => ['git', '--git-dir='.$this->path, 'fetch', '--no-tags', $remote],
+                $remotes,
+            ),
         );
 
         return $this;
@@ -265,12 +263,10 @@ class Repository
     {
         $this->pushRefspecs(
             array_map(
-                static function ($pushBranch) {
-                    return ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]];
-                },
-                $branches
+                static fn ($pushBranch) => ['refs/heads/'.$pushBranch[0].':refs/heads/'.$pushBranch[2], $pushBranch[1]],
+                $branches,
             ),
-            $force
+            $force,
         );
 
         return $this;
@@ -287,12 +283,10 @@ class Repository
     {
         $this->pushRefspecs(
             array_map(
-                static function ($pushTag) {
-                    return ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]];
-                },
-                $tags
+                static fn ($pushTag) => ['refs/tags/'.$pushTag[0].':refs/tags/'.$pushTag[2], $pushTag[1]],
+                $tags,
             ),
-            $force
+            $force,
         );
 
         return $this;
@@ -344,12 +338,12 @@ class Repository
 
                     return $command;
                 },
-                $refspecsRemote
-            )
+                $refspecsRemote,
+            ),
         );
     }
 
-    private function run(array $command, $exitOnFailure = true, array $env = null): array
+    private function run(array $command, $exitOnFailure = true, array|null $env = null): array
     {
         // Move the cursor to the beginning of the line
         $this->output->write("\x0D");
