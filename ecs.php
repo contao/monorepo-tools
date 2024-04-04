@@ -10,6 +10,7 @@ declare(strict_types=1);
  * @license LGPL-3.0-or-later
  */
 
+use Contao\EasyCodingStandard\Set\SetList;
 use PhpCsFixer\Fixer\Comment\HeaderCommentFixer;
 use PhpCsFixer\Fixer\Operator\NoUselessConcatOperatorFixer;
 use PhpCsFixer\Fixer\Whitespace\MethodChainingIndentationFixer;
@@ -17,10 +18,12 @@ use Symplify\EasyCodingStandard\Config\ECSConfig;
 use Symplify\EasyCodingStandard\ValueObject\Option;
 
 return ECSConfig::configure()
-    ->withSets([__DIR__.'/vendor/contao/code-quality/config/ecs.php'])
+    ->withSets([SetList::CONTAO])
     ->withPaths([
         __DIR__.'/src',
         __DIR__.'/tests',
+        __DIR__.'/ecs.php',
+        __DIR__.'/rector.php',
     ])
     ->withSkip([
         MethodChainingIndentationFixer::class => [
@@ -33,5 +36,5 @@ return ECSConfig::configure()
     ->withParallel()
     ->withSpacing(Option::INDENTATION_SPACES, "\n")
     ->withConfiguredRule(HeaderCommentFixer::class, ['header' => "This file is part of Contao.\n\n(c) Leo Feyer\n\n@license LGPL-3.0-or-later"])
-    ->withCache(sys_get_temp_dir().'/ecs_monorepo_cache')
+    ->withCache(sys_get_temp_dir().'/monorepo_ecs_cache')
 ;

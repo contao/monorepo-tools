@@ -59,10 +59,10 @@ jobs:
               run: composer install --no-interaction --no-progress
 
             - name: Run Rector
-              run: vendor/bin/rector --dry-run --no-progress-bar --ansi
+              run: vendor/bin/rector --dry-run --no-progress-bar
 
             - name: Run ECS
-              run: vendor/bin/ecs check --no-progress-bar --ansi
+              run: vendor/bin/ecs check --no-progress-bar
 
             - name: Run PHPStan
               run: vendor/bin/phpstan analyse --no-progress
