@@ -23,7 +23,8 @@
     },
     "require-dev": {
         "ausi/remote-git": "^0.2.5",
-        "contao/code-quality": "^1.0",
+        "contao/easy-coding-standard": "^6.12",
+        "contao/rector": "^1.2",
         "phpstan/phpstan": "^1.0",
         "phpstan/phpstan-symfony": "^1.0",
         "phpunit/phpunit": "^9.5"
@@ -56,9 +57,9 @@
             "@unit-tests",
             "@phpstan"
         ],
-        "ecs": "@php vendor/bin/ecs check --fix --ansi",
-        "phpstan": "@php vendor/bin/phpstan analyze  --ansi",
-        "rector": "@php vendor/bin/rector --ansi",
-        "unit-tests": "@php vendor/bin/phpunit --colors=always"
+        "ecs": "@php vendor/bin/ecs check --fix",
+        "phpstan": "@php vendor/bin/phpstan analyze",
+        "rector": "@php vendor/bin/rector",
+        "unit-tests": "@php vendor/bin/phpunit"
     }
 }
