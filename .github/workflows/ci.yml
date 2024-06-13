@@ -24,10 +24,12 @@ jobs:
                   coverage: pcov
 
             - name: Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
+              with:
+                  show-progress: false
 
             - name: Install the dependencies
-              run: composer install --no-interaction --no-progress
+              uses: ramsey/composer-install@v3
 
             - name: Generate the coverage report
               run: php -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover=clover.xml
@@ -37,7 +39,6 @@ jobs:
               with:
                   files: ./clover.xml
                   fail_ci_if_error: true
-              env:
                   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     coding-style:
@@ -53,10 +54,12 @@ jobs:
                   coverage: none
 
             - name: Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
+              with:
+                  show-progress: false
 
             - name: Install the dependencies
-              run: composer install --no-interaction --no-progress
+              uses: ramsey/composer-install@v3
 
             - name: Run Rector
               run: vendor/bin/rector --dry-run --no-progress-bar
@@ -84,10 +87,12 @@ jobs:
                   coverage: none
 
             - name: Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
+              with:
+                  show-progress: false
 
             - name: Install the dependencies
-              run: composer install --no-interaction --no-progress
+              uses: ramsey/composer-install@v3
 
             - name: Run the unit tests
               run: vendor/bin/phpunit
@@ -106,10 +111,14 @@ jobs:
                   coverage: none
 
             - name: Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
+              with:
+                  show-progress: false
 
-            - name: Install the dependencies
-              run: composer install --ignore-platform-req=php+ --no-interaction --no-progress
+            - name: Install Contao
+              uses: ramsey/composer-install@v3
+              with:
+                  composer-options: --ignore-platform-req=php+
 
             - name: Run the unit tests
               run: vendor/bin/phpunit
@@ -127,10 +136,14 @@ jobs:
                   coverage: none
 
             - name: Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
+              with:
+                  show-progress: false
 
-            - name: Install the dependencies
-              run: composer update --prefer-lowest --prefer-stable --no-interaction --no-progress
+            - name: Install Contao
+              uses: ramsey/composer-install@v3
+              with:
+                  dependency-versions: lowest
 
             - name: Run the unit tests
               run: vendor/bin/phpunit
