@@ -128,7 +128,7 @@ class Repository
         foreach ($this->run(['git', '--git-dir='.$this->path, 'branch', '-r']) as $branch) {
             $branch = trim($branch);
 
-            if ('' === $branch || !str_starts_with($branch, $remote.'/')) {
+            if ('' === $branch || str_contains($branch, '->') || !str_starts_with($branch, $remote.'/')) {
                 continue;
             }
 
