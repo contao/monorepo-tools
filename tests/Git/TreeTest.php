@@ -67,7 +67,7 @@ class TreeTest extends TestCase
         new Tree($rawTree);
     }
 
-    public function getInvalidTrees(): \Generator
+    public static function getInvalidTrees(): iterable
     {
         yield [' '];
         yield ['invalid'];

@@ -170,7 +170,7 @@ class ComposerJsonCommand extends Command
 
         foreach ($invalid as $path => $json) {
             if (!file_put_contents($path, $json)) {
-                throw new RuntimeException(sprintf('Unable to write to %s', $path));
+                throw new RuntimeException(\sprintf('Unable to write to %s', $path));
             }
         }
 
@@ -201,7 +201,7 @@ class ComposerJsonCommand extends Command
                 $path = $this->rootDir.'/'.$folder.'/composer.json';
 
                 if (!file_exists($path)) {
-                    throw new \InvalidArgumentException(sprintf('File %s doesn’t exist.', $path));
+                    throw new \InvalidArgumentException(\sprintf('File %s doesn’t exist.', $path));
                 }
 
                 return json_decode(file_get_contents($path), true);
@@ -533,7 +533,7 @@ class ComposerJsonCommand extends Command
                 $path = $this->rootDir.'/'.$folder.'/composer.json';
 
                 if (!file_exists($path)) {
-                    throw new \InvalidArgumentException(sprintf('File %s doesn’t exist.', $path));
+                    throw new \InvalidArgumentException(\sprintf('File %s doesn’t exist.', $path));
                 }
 
                 return json_decode(file_get_contents($path), true);

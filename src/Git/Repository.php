@@ -163,7 +163,7 @@ class Repository
         $result = $this->run(['git', '--git-dir='.$this->path, 'rev-list', '-n', '1', $tag]);
 
         if ([] === $result || 40 !== \strlen($result[0])) {
-            throw new \RuntimeException(sprintf('Tag %s not found.', $tag));
+            throw new \RuntimeException(\sprintf('Tag %s not found.', $tag));
         }
 
         return $result[0];
@@ -234,7 +234,7 @@ class Repository
         $path = $this->path.'/refs/heads/'.$name;
 
         if (!is_dir(\dirname($path)) && !mkdir(\dirname($path), 0777, true) && !is_dir(\dirname($path))) {
-            throw new \RuntimeException(sprintf('Unable to create directory %s', \dirname($path)));
+            throw new \RuntimeException(\sprintf('Unable to create directory %s', \dirname($path)));
         }
 
         file_put_contents($path, $hash);
@@ -288,7 +288,7 @@ class Repository
         $path = $this->path.'/objects/'.substr($hash, 0, 2).'/'.substr($hash, 2);
 
         if (!is_dir(\dirname($path)) && !mkdir(\dirname($path), 0777, true) && !is_dir(\dirname($path))) {
-            throw new \RuntimeException(sprintf('Unable to create directory %s', \dirname($path)));
+            throw new \RuntimeException(\sprintf('Unable to create directory %s', \dirname($path)));
         }
 
         if (!file_exists($path)) {

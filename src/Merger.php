@@ -56,7 +56,7 @@ class Merger
         private readonly OutputInterface $output,
     ) {
         if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
-            throw new \RuntimeException(sprintf('Unable to create directory %s', $cacheDir));
+            throw new \RuntimeException(\sprintf('Unable to create directory %s', $cacheDir));
         }
     }
 
@@ -161,20 +161,20 @@ class Merger
         $commits = $this->readCommits(array_values($branchCommits));
 
         if ([] === $commits) {
-            throw new \RuntimeException(sprintf('No commits found for: %s', print_r($branchCommits, true)));
+            throw new \RuntimeException(\sprintf('No commits found for: %s', print_r($branchCommits, true)));
         }
 
         $hashMapping = $this->moveCommitsToSubfolder($commits, $subFolder);
 
         if ([] === $hashMapping) {
-            throw new \RuntimeException(sprintf('No hash mapping for commits: %s', print_r($commits, true)));
+            throw new \RuntimeException(\sprintf('No hash mapping for commits: %s', print_r($commits, true)));
         }
 
         foreach ($this->repository->getTags('remote/'.$subFolder.'/') as $tag => $commitHash) {
             $newTag = $subFolder.'-'.$tag;
 
             if (!isset($hashMapping[$commitHash])) {
-                throw new \RuntimeException(sprintf('Missing Commit hash %s for tag %s. %s', $commitHash, $tag, print_r($hashMapping, true)));
+                throw new \RuntimeException(\sprintf('Missing Commit hash %s for tag %s. %s', $commitHash, $tag, print_r($hashMapping, true)));
             }
 
             $this->repository->addTag($newTag, $hashMapping[$commitHash]);
@@ -189,7 +189,7 @@ class Merger
 
         foreach ($this->repository->getTags('remote/'.$subFolder.'/') as $tag => $commitHash) {
             if (!isset($hashMapping[$commitHash])) {
-                throw new \RuntimeException(sprintf('Missing Commit hash %s for tag %s. %s', $commitHash, $tag, print_r($hashMapping, true)));
+                throw new \RuntimeException(\sprintf('Missing Commit hash %s for tag %s. %s', $commitHash, $tag, print_r($hashMapping, true)));
             }
 
             $return['tags'][$tag] = $hashMapping[$commitHash];

@@ -46,7 +46,7 @@ class Splitter
         $this->objectsCachePath = $cacheDir.'/objects-v1.cache';
 
         if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
-            throw new \RuntimeException(sprintf('Unable to create directory %s', $cacheDir));
+            throw new \RuntimeException(\sprintf('Unable to create directory %s', $cacheDir));
         }
     }
 
@@ -93,7 +93,7 @@ class Splitter
                 $splitTreeHash = $this->getCommitObject($splitHash)->getTreeHash();
 
                 if ($monoTreeHash !== $splitTreeHash) {
-                    throw new \RuntimeException(sprintf('Invalid mapping from %s to %s. Tree for folder %s does not match.', $monoHash, $splitHash, $subFolder));
+                    throw new \RuntimeException(\sprintf('Invalid mapping from %s to %s. Tree for folder %s does not match.', $monoHash, $splitHash, $subFolder));
                 }
             }
         }
@@ -118,7 +118,7 @@ class Splitter
                         ->getTag('remote/mono/'.$this->branchOrTag)
                     ;
                 } catch (\Exception) {
-                    throw new InvalidArgumentException(sprintf('Branch or tag %s does not exist, use one of %s', $this->branchOrTag, implode(', ', array_keys($branchCommits))));
+                    throw new InvalidArgumentException(\sprintf('Branch or tag %s does not exist, use one of %s', $this->branchOrTag, implode(', ', array_keys($branchCommits))));
                 }
 
                 $tagCommits = [$this->branchOrTag => $tagHash];
@@ -132,7 +132,7 @@ class Splitter
             }
 
             if ([] === $branchCommits) {
-                throw new \RuntimeException(sprintf('No branch matching the filter %s found.', $this->branchFilter));
+                throw new \RuntimeException(\sprintf('No branch matching the filter %s found.', $this->branchFilter));
             }
         }
 
@@ -141,7 +141,7 @@ class Splitter
         $commitObjects = $this->readCommits([...array_values($branchCommits), ...array_values($tagCommits)]);
 
         if ([] === $commitObjects) {
-            throw new \RuntimeException(sprintf('No commits found for: %s %s', print_r($branchCommits, true), print_r($tagCommits, true)));
+            throw new \RuntimeException(\sprintf('No commits found for: %s %s', print_r($branchCommits, true), print_r($tagCommits, true)));
         }
 
         $this->output->writeln("\nSplit commits...");
@@ -149,7 +149,7 @@ class Splitter
         $hashMapping = $this->splitCommits($commitObjects, $this->repoUrlsByFolder);
 
         if ([] === $hashMapping) {
-            throw new \RuntimeException(sprintf('No hash mapping for commits: %s', print_r($commitObjects, true)));
+            throw new \RuntimeException(\sprintf('No hash mapping for commits: %s', print_r($commitObjects, true)));
         }
 
         $pushBranches = [];
