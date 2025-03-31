@@ -125,15 +125,15 @@ class Repository
     {
         $branches = [];
 
-        foreach ($this->run(['git', '--git-dir='.$this->path, 'branch', '-r']) as $branch) {
-            $branch = trim($branch);
+        foreach ($this->run(['git', '--git-dir='.$this->path, 'ls-remote', '--heads', $remote]) as $line) {
+            [$commit, $branch] = explode("\t", trim($line)) + ['', ''];
 
-            if ('' === $branch || !str_starts_with($branch, $remote.'/')) {
+            if (40 !== \strlen($commit) || !str_starts_with($branch, 'refs/heads/')) {
                 continue;
             }
 
-            $branch = substr($branch, \strlen($remote.'/'));
-            $branches[$branch] = $this->run(['git', '--git-dir='.$this->path, 'rev-parse', $remote.'/'.$branch])[0];
+            $branch = substr($branch, \strlen('refs/heads/'));
+            $branches[$branch] = $commit;
         }
 
         return $branches;
