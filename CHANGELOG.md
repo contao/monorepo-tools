@@ -4,6 +4,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+ *  Use ls-remote command to list remote branches. [#30]
 
 ## [0.2.0] (2024-03-27)
 
@@ -18,5 +19,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 [0.2.0]: https://github.com/contao/monorepo-tools/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/contao/monorepo-tools/commits/0.1.0
 
+[#30]: https://github.com/contao/monorepo-tools/issues/30
 [#22]: https://github.com/contao/monorepo-tools/issues/22
 [#20]: https://github.com/contao/monorepo-tools/issues/20
