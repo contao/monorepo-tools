@@ -349,7 +349,7 @@ class ComposerJsonCommand extends Command
 
             foreach (array_keys($this->replacedPackages[$packageName]) as $replacedPackageName) {
                 if (isset($requires[$replacedPackageName])) {
-                    $requires[$packageName] = array_merge($requires[$packageName], $requires[$replacedPackageName]);
+                    $requires[$packageName] = [...$requires[$packageName], ...$requires[$replacedPackageName]];
                     unset($requires[$replacedPackageName]);
                 }
             }
