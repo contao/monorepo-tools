@@ -4,7 +4,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-* Compatibility with Symfony version 8.0. [#33]
+
+## [0.2.2] (2026-07-13)
+
+ * Compatibility with Symfony version 8.0. [#33]
 
 ## [0.2.1] (2025-03-31)
 
@@ -19,7 +22,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
  * Initial release.
 
-[Unreleased]: https://github.com/contao/monorepo-tools/compare/0.2.1...HEAD
+[Unreleased]: https://github.com/contao/monorepo-tools/compare/0.2.2...HEAD
+[0.2.2]: https://github.com/contao/monorepo-tools/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/contao/monorepo-tools/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/contao/monorepo-tools/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/contao/monorepo-tools/commits/0.1.0
