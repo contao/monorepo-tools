@@ -19,7 +19,9 @@ use Contao\MonorepoTools\Command\ComposerJsonCommand;
 $rootDir = getcwd();
 
 $application = new Application();
-$application->add(new SplitCommand($rootDir));
-$application->add(new MergeCommand($rootDir));
-$application->add(new ComposerJsonCommand($rootDir));
+$application->addCommands([
+    new SplitCommand($rootDir),
+    new MergeCommand($rootDir),
+    new ComposerJsonCommand($rootDir),
+]);
 $application->run();
