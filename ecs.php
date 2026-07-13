@@ -22,8 +22,6 @@ return ECSConfig::configure()
     ->withPaths([
         __DIR__.'/src',
         __DIR__.'/tests',
-        __DIR__.'/ecs.php',
-        __DIR__.'/rector.php',
     ])
     ->withSkip([
         MethodChainingIndentationFixer::class => [
@@ -33,8 +31,9 @@ return ECSConfig::configure()
             'tests/Git/TreeTest.php',
         ],
     ])
+    ->withRootFiles()
     ->withParallel()
     ->withSpacing(Option::INDENTATION_SPACES, "\n")
     ->withConfiguredRule(HeaderCommentFixer::class, ['header' => "This file is part of Contao.\n\n(c) Leo Feyer\n\n@license LGPL-3.0-or-later"])
-    ->withCache(sys_get_temp_dir().'/monorepo_ecs_cache')
+    ->withCache(sys_get_temp_dir().'/ecs/monorepo')
 ;

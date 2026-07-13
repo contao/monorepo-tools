@@ -16,17 +16,17 @@ use Rector\Php73\Rector\FuncCall\JsonThrowOnErrorRector;
 use Rector\Php81\Rector\FuncCall\NullToStrictStringFuncCallArgRector;
 
 return RectorConfig::configure()
+    ->withPhpSets(php81: true)
     ->withSets([SetList::CONTAO])
     ->withPaths([
         __DIR__.'/src',
         __DIR__.'/tests',
-        __DIR__.'/ecs.php',
-        __DIR__.'/rector.php',
     ])
     ->withSkip([
         JsonThrowOnErrorRector::class,
         NullToStrictStringFuncCallArgRector::class,
     ])
+    ->withRootFiles()
     ->withParallel()
-    ->withCache(sys_get_temp_dir().'/monorepo_rector_cache')
+    ->withCache(sys_get_temp_dir().'/rector/monorepo')
 ;
