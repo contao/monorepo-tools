@@ -172,7 +172,7 @@ class Splitter
             $this->output->writeln("\nCreate tags...");
 
             foreach ($tagCommits as $tag => $commit) {
-                foreach (array_keys($this->repoUrlsByFolder) as $subRepo) {
+                foreach ($this->getSubReposForTag($tag) as $subRepo) {
                     if (isset($hashMapping[$subRepo][$commit])) {
                         $this->repository->addTag('remote/'.$subRepo.'/'.$tag, $hashMapping[$subRepo][$commit]);
                         $pushTags[] = ['remote/'.$subRepo.'/'.$tag, $subRepo, $tag];
@@ -191,6 +191,29 @@ class Splitter
         $this->repository->pushTags($pushTags);
 
         $this->output->writeln("\nDone 🎉");
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function getSubReposForTag(string $tag): array
+    {
+        $matchingSubRepos = [];
+        $unfilteredSubRepos = [];
+
+        foreach ($this->repoUrlsByFolder as $subRepo => $config) {
+            if (!isset($config['tag_filter'])) {
+                $unfilteredSubRepos[] = $subRepo;
+
+                continue;
+            }
+
+            if (preg_match($config['tag_filter'], $tag)) {
+                $matchingSubRepos[] = $subRepo;
+            }
+        }
+
+        return [] !== $matchingSubRepos ? $matchingSubRepos : $unfilteredSubRepos;
     }
 
     /**

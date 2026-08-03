@@ -95,6 +95,10 @@ repositories:
         # URL or absolute path to the remote GIT repository
         url: https://github.com/YOUR-VENDORNAME/YOUR-FIRST-SPLIT-PROJECT.git
 
+        # Optional regular expression for tags belonging only to this repository
+        # Tags matching any repository's filter are excluded from repositories without a filter
+        tag_filter: '#^first-component/#'
+
     # Second split project living in the folder /second-subfolder
     second-subfolder:
 
