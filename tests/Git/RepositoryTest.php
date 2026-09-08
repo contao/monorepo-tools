@@ -113,6 +113,10 @@ class RepositoryTest extends TestCase
 
         $this->assertSame($repository, $repository->fetchConcurrent(['remoteA', 'remoteB']));
         $this->assertSame(['main' => $commitB->getHash()], $repository->getRemoteBranches('remoteB'));
+        $this->assertSame(
+            ['4b825dc642cb6eb9a060e54bf8d69288fbee4904'],
+            array_keys($repository->getTrees(['4b825dc642cb6eb9a060e54bf8d69288fbee4904'])),
+        );
 
         $this->assertSame($repository, $repository->fetchTag('1.0.0', 'remoteA', 'remoteA-tag/'));
         $this->assertSame($commitA->getHash(), $repository->getTag('remoteA-tag/1.0.0'));
