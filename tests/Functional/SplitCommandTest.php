@@ -61,6 +61,7 @@ class SplitCommandTest extends TestCase
                 'repositories' => [
                     'bundle-foo' => [
                         'url' => $gitDirs['foo'],
+                        'tag_filter' => '#^component/#',
                     ],
                     'bundle-bar' => [
                         'url' => $gitDirs['bar'],
@@ -139,6 +140,22 @@ class SplitCommandTest extends TestCase
 
         $this->assertSame('main', trim($git->execute(['branch'], $gitDirs['foo']), " \n*"), 'Only configured branches should get split');
         $this->assertSame('main', trim($git->execute(['branch'], $gitDirs['bar']), " \n*"), 'Only configured branches should get split');
+
+        $git->execute([...$monoGit, 'tag', 'component/1.0.0']);
+        $git->execute([...$monoGit, 'tag', '5.6.8']);
+
+        (new Process(
+            [Path::join(__DIR__, '../../bin/monorepo-tools'), 'split', 'component/1.0.0'],
+            Path::join($this->tmpDir, 'monorepo-1'),
+        ))->mustRun();
+
+        (new Process(
+            [Path::join(__DIR__, '../../bin/monorepo-tools'), 'split', '5.6.8'],
+            Path::join($this->tmpDir, 'monorepo-1'),
+        ))->mustRun();
+
+        $this->assertSame('component/1.0.0', trim($git->execute(['tag'], $gitDirs['foo'])));
+        $this->assertSame('5.6.8', trim($git->execute(['tag'], $gitDirs['bar'])));
 
         (new Process(
             [Path::join(__DIR__, '../../bin/monorepo-tools'), 'composer-json'],
