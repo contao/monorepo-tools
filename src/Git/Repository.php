@@ -193,6 +193,17 @@ class Repository
         return new Tree(implode("\n", $this->run(['git', '--git-dir='.$this->path, 'cat-file', 'tree', $hash])));
     }
 
+    /**
+     * @return array<string, Tree>
+     */
+    public function getTrees(array $hashes): array
+    {
+        return array_map(
+            static fn (string $rawTree) => new Tree($rawTree),
+            $this->getObjects($hashes, 'tree'),
+        );
+    }
+
     public function commitTree(string $treeHash, string $message, array $parents = [], bool $copyDateFromParents = false): string
     {
         $env = [];
@@ -226,7 +237,7 @@ class Repository
 
         $command[] = $treeHash;
 
-        return $this->run($command, true, $env)[0];
+        return $this->run($command, $env)[0];
     }
 
     public function addBranch(string $name, string $hash): self
@@ -333,42 +344,80 @@ class Repository
         );
     }
 
-    private function run(array $command, $exitOnFailure = true, array|null $env = null): array
+    /**
+     * @return array<string, string>
+     */
+    private function getObjects(array $hashes, string $expectedType): array
     {
-        // Move the cursor to the beginning of the line
-        $this->output->write("\x0D");
-
-        // Erase the line
-        $this->output->write("\x1B[2K");
-        $this->output->write(implode(' ', $command));
-
-        $process = new Process($command, null, $env);
-        $process->run();
-
-        if ($exitOnFailure && !$process->isSuccessful()) {
-            throw new ProcessFailedException($process);
+        if ([] === $hashes) {
+            return [];
         }
 
-        return explode("\n", $process->getOutput());
+        $process = $this->createProcess(['git', '--git-dir='.$this->path, 'cat-file', '--batch']);
+        $process->setInput(implode("\n", $hashes)."\n");
+
+        $objects = [];
+        $output = $this->execute($process, false);
+        $offset = 0;
+
+        foreach ($hashes as $hash) {
+            $headerEnd = strpos($output, "\n", $offset);
+            $header = false === $headerEnd ? '' : substr($output, $offset, $headerEnd - $offset);
+
+            if (!preg_match('/^([0-9a-f]{40}) ([a-z]+) ([0-9]+)$/', $header, $matches) || $expectedType !== $matches[2]) {
+                throw new \RuntimeException(\sprintf('Unable to read %s object %s.', $expectedType, $hash));
+            }
+
+            $size = (int) $matches[3];
+            $offset = $headerEnd + 1;
+            $objects[$matches[1]] = substr($output, $offset, $size);
+            $offset += $size + 1;
+        }
+
+        return $objects;
     }
 
-    private function execute(array $command, $exitOnFailure = true): void
+    private function run(array $command, array|null $env = null): array
     {
-        $this->output->writeln('   $ '.implode(' ', $command));
+        return explode("\n", $this->execute($command, false, $env));
+    }
 
-        $process = new Process($command);
-        $process->setTimeout(600);
-        $process->start();
+    private function execute(Process|array $command, bool $streamOutput = true, array|null $env = null): string
+    {
+        $process = $command instanceof Process ? $command : $this->createProcess($command, $env);
 
-        foreach ($process->getIterator() as $data) {
-            $this->output->write($data);
+        if ($streamOutput) {
+            $this->output->writeln('   $ '.$process->getCommandLine());
+            $process->start();
+
+            foreach ($process->getIterator() as $data) {
+                $this->output->write($data);
+            }
+
+            $process->wait();
+        } else {
+            // Move the cursor to the beginning of the line
+            $this->output->write("\x0D");
+
+            // Erase the line
+            $this->output->write("\x1B[2K");
+            $this->output->write($process->getCommandLine());
+            $process->run();
         }
 
-        $process->wait();
-
-        if ($exitOnFailure && !$process->isSuccessful()) {
+        if (!$process->isSuccessful()) {
             throw new ProcessFailedException($process);
         }
+
+        return $process->getOutput();
+    }
+
+    private function createProcess(array $command, array|null $env = null): Process
+    {
+        $process = new Process($command, null, $env);
+        $process->setTimeout(600);
+
+        return $process;
     }
 
     private function executeConcurrent(array $commands, $exitOnFailure = true): void
@@ -378,9 +427,8 @@ class Repository
         foreach ($commands as $command) {
             $this->output->writeln('   $ '.implode(' ', $command));
 
-            $process = new Process($command);
+            $process = $this->createProcess($command);
             $processes[] = $process;
-            $process->setTimeout(600);
             $process->start();
         }
 

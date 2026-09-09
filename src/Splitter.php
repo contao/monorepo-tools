@@ -144,6 +144,8 @@ class Splitter
             throw new \RuntimeException(\sprintf('No commits found for: %s %s', print_r($branchCommits, true), print_r($tagCommits, true)));
         }
 
+        $this->loadTrees($commitObjects);
+
         $this->output->writeln("\nSplit commits...");
 
         $hashMapping = $this->splitCommits($commitObjects, $this->repoUrlsByFolder);
@@ -341,8 +343,8 @@ class Splitter
         $commits = [];
         $pending = $baseCommits;
 
-        while (\count($pending)) {
-            $current = array_shift($pending);
+        while ([] !== $pending) {
+            $current = array_pop($pending);
 
             if (isset($commits[$current])) {
                 continue;
@@ -362,6 +364,21 @@ class Splitter
         }
 
         return $commits;
+    }
+
+    /**
+     * @param array<string, Commit> $commitObjects
+     */
+    private function loadTrees(array $commitObjects): void
+    {
+        $treeHashes = [];
+
+        foreach ($commitObjects as $commit) {
+            $treeHashes[$commit->getTreeHash()] = true;
+        }
+
+        $uncachedHashes = array_values(array_diff(array_keys($treeHashes), array_keys($this->treeCache)));
+        $this->treeCache += $this->repository->getTrees($uncachedHashes);
     }
 
     private function getTreeObject($hash): Tree
